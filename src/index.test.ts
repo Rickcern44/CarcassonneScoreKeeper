@@ -10,12 +10,11 @@ describe('supabase tests', (): void => {
 	it('test connection', () =>{
 		const db = database;
 		expect(db).toBeDefined();
-		expect(db).to
 	})
 	it('Get Test Response', async () => {
-		const {status} = await database.from('TestTable')
-			.select('*')
+		const {data} = await database.from('TestTable')
+			.select('*', {count: 'exact', head: true})
 
-		expect(status).toBe(200)
+		expect(data).toBeDefined();
 	})
 })

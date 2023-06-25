@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { env } from '$env/dynamic/private';
+import { PUBLIC_VITE_SUPABASE_API_KEY } from '$env/static/public';
 
 export const database = createClient("https://hvpxjnmktqdukbvgvcst.supabase.co",
-  env.VITE_SUPABASE_API_KEY)
+  PUBLIC_VITE_SUPABASE_API_KEY)
