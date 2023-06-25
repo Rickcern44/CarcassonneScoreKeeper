@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { database } from "$lib/db";
-import { test } from "@playwright/test";
 
 describe('sum test', () => {
 	it('adds 1 + 2 to equal 3', () => {
@@ -12,5 +11,11 @@ describe('supabase tests', (): void => {
 		const db = database;
 		expect(db).toBeDefined();
 		expect(db).to
+	})
+	it('Get Test Response', async () => {
+		const {status} = await database.from('TestTable')
+			.select('*')
+
+		expect(status).toBe(200)
 	})
 })
