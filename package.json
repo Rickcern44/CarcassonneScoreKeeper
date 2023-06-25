@@ -6,7 +6,7 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
-		"test": "playwright test",
+		"playwright-test": "playwright test",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "vitest",
@@ -24,6 +24,7 @@
 		"eslint-plugin-svelte": "^2.30.0",
 		"prettier": "^2.8.0",
 		"prettier-plugin-svelte": "^2.10.1",
+		"supabase": "^1.68.6",
 		"svelte": "^4.0.0",
 		"svelte-check": "^3.4.3",
 		"tslib": "^2.4.1",
@@ -31,5 +32,8 @@
 		"vite": "^4.3.6",
 		"vitest": "^0.25.3"
 	},
-	"type": "module"
+	"type": "module",
+	"dependencies": {
+		"@supabase/supabase-js": "^2.26.0"
+	}
 }
