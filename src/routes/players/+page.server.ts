@@ -1,5 +1,6 @@
 import { database } from "$lib/db";
 import { error as svelteError } from "@sveltejs/kit";
+import type { Actions } from './$types';
 
 export async function load(){
   const {data : players , error} = await database.from("Players").select('*')
@@ -10,7 +11,7 @@ export async function load(){
 }
 
 export const actions ={
-  create: async ({request}) => {
+  create: async ({ request}) => {
     const data = await request.formData();
 
     // Check no players have that name already
@@ -22,7 +23,7 @@ export const actions ={
       await database.from('Players').insert({name: data.get('name')})
     }else{
       // TODO: Add a toast message here instead of a throw
-      throw svelteError(403, 'that name already exists p');
+      throw svelteError(403, 'that name already exists please choose another!');
     }
   }
-}
+} satisfies Actions

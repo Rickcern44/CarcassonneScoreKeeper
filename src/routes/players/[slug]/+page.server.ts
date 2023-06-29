@@ -1,13 +1,12 @@
 import { database } from "$lib/db";
 import { error as svelteError } from "@sveltejs/kit";
+import type { PageServerLoad } from './$types';
 
-export async function load({params}){
-  const {data : player , error} = await database.from("Players")
+export const load = (async ({params}) => {
+  const {data: player, error} = await database.from("Players")
     .select('*')
     .eq('id', params.slug)
     .single()
 
-  if(error) throw svelteError(404)
-
-  return {player}
-}
+  return player;
+}) satisfies PageServerLoad
