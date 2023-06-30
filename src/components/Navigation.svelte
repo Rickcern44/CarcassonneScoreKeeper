@@ -8,9 +8,8 @@
 
 <nav class="list-nav p-4">
   <ul>
-    <li><a href="/" on:click={drawerClose}>Homepage</a></li>
-    <li><a href="/about" on:click={drawerClose}>About</a></li>
-    <li><a href="/blog" on:click={drawerClose}>Blog</a></li>
-    <li><a href="/contact" on:click={drawerClose}>Contact</a></li>
+    <li><a href="/" on:click={drawerClose}>Home</a></li>
+    <li><a href="/newgame" on:click={drawerClose}>New Game</a></li>
+    <li><a href="/players" on:click={drawerClose}>Players</a></li>
   </ul>
 </nav>
