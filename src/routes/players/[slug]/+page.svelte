@@ -2,7 +2,7 @@
   import { ArrowLeftIcon, EditIcon} from 'svelte-feather-icons'
   export let data;
 
-  let formattedDate = new Date(data.created_at).toLocaleDateString()
+  let formattedDate = new Date(data?.created_at).toLocaleDateString()
 
   const editPlayer = () => {
     console.warn('Editing Player')
