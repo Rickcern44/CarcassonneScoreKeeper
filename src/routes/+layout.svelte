@@ -2,9 +2,7 @@
   import { page } from '$app/stores';
 
   // Skeleton Features
-  import { AppShell, AppBar, Toast, popup,storePopup, Drawer, drawerStore, LightSwitch } from "@skeletonlabs/skeleton";
-  import type {PopupSettings} from "@skeletonlabs/skeleton";
-  import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
+  import { AppShell, AppBar, Toast, Drawer, drawerStore } from "@skeletonlabs/skeleton";
 
   // Icons
   import { SettingsIcon } from 'svelte-feather-icons'
@@ -17,16 +15,12 @@
   import '@skeletonlabs/skeleton/styles/skeleton.css';
   import "../app.css";
 
-  storePopup.set({ computePosition, autoUpdate, offset, shift, flip, arrow });
 
-  const settingsPopup: PopupSettings = {
-    event: 'click',
-    target: 'settingsPopup',
-    placement: 'bottom',
-  }
   function drawerOpen(): void {
     drawerStore.open({});
   }
+
+  export let data
 
   // Reactive Properties
   $: classesSidebarLeft = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-64';
@@ -34,7 +28,7 @@
 
 <!-- Drawer -->
 <Drawer>
-  <h2 class="p-4">Navigation</h2>
+  <h2 class="p-4">{data.session.user.email ?? 'Not Signe In'}</h2>
   <hr />
   <Navigation />
 </Drawer>
@@ -55,13 +49,15 @@
 							</svg>
 						</span>
           </button>
-          <strong class="text-xl uppercase">Carc Keeper</strong>
+          <a href="/home">
+            <strong class="text-xl uppercase">Carc Keeper</strong>
+          </a>
         </div>
       </svelte:fragment>
       <svelte:fragment slot="trail">
-        <button use:popup={settingsPopup}>
+        <a href="settings">
           <SettingsIcon size="2x"/>
-        </button>
+        </a>
       </svelte:fragment>
     </AppBar>
   </svelte:fragment>
@@ -72,12 +68,6 @@
   <!-- Page Route Content -->
   <slot />
 </AppShell>
-
-<!--Popup Design-->
-<div class="card p-4 w-72 shadow-xl" data-popup="settingsPopup">
-  <LightSwitch />
-  <a href="/settings">Settings</a>
-</div>
 
 <Toast />
 
