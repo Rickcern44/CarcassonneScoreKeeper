@@ -1,5 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import { invalidate } from '$app/navigation'
+  import { onMount } from 'svelte'
 
   // Skeleton Features
   import { AppShell, AppBar, Toast, Drawer, drawerStore } from "@skeletonlabs/skeleton";
@@ -14,13 +16,30 @@
   import '@skeletonlabs/skeleton/themes/theme-hamlindigo.css';
   import '@skeletonlabs/skeleton/styles/skeleton.css';
   import "../app.css";
+  import{ PUBLIC_ENVIRONMENT } from '$env/static/public'
 
 
   function drawerOpen(): void {
     drawerStore.open({});
   }
-
   export let data
+
+  if(PUBLIC_ENVIRONMENT === 'Development'){
+    console.log(data?.session)
+  }
+
+  let { supabase, session } = data
+  $: ({ supabase, session } = data)
+
+  onMount(() => {
+    const { data } = supabase.auth.onAuthStateChange((event, _session) => {
+      if (_session?.expires_at !== session?.expires_at) {
+        invalidate('supabase:auth')
+      }
+    })
+
+    return () => data.subscription.unsubscribe()
+  })
 
   // Reactive Properties
   $: classesSidebarLeft = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-64';
@@ -28,9 +47,9 @@
 
 <!-- Drawer -->
 <Drawer>
-  <h2 class="p-4">{data.session.user.email ?? 'Not Signe In'}</h2>
+  <h2 class="p-4">{data?.session?.user?.email ?? 'Not Signed In'}</h2>
   <hr />
-  <Navigation />
+  <Navigation supabase={supabase}/>
 </Drawer>
 
 <!-- App Shell -->
