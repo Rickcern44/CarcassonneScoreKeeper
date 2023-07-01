@@ -1,6 +1,6 @@
 <script lang="ts">
   import { drawerStore } from '@skeletonlabs/skeleton';
-  import { redirect } from "@sveltejs/kit";
+  import { invalidateAll } from "$app/navigation";
 
   export let supabase;
 
@@ -10,7 +10,7 @@
 
   const logout = async () => {
     await supabase.auth.signOut()
-    throw redirect(303, '/')
+    await invalidateAll();
   }
 </script>
 
