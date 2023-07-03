@@ -1,7 +1,7 @@
 <script lang="ts">
   import "../app.css";
   import { Auth } from "@supabase/auth-ui-svelte";
-  import { ThemeMinimal, ThemeSupa } from "@supabase/auth-ui-shared";
+  import { ThemeSupa } from "@supabase/auth-ui-shared";
 
   export let data
 

@@ -10,6 +10,7 @@
   let currentPlayers = [];
   let playerId;
   let gameReady: string | undefined = currentPlayers.length !== 0 ? 'disabled' : undefined
+  let playerSelected : string | undefined = playerId === undefined || playerId === '0' ? 'disabled': undefined
   // load events
   onMount(() => {
     availablePlayers = data.players;
@@ -63,7 +64,9 @@
         <option value={player.id}>{player.name}</option>
       {/each }
   </select>
-  <button class="btn variant-ghost-success mt-2 disabled:variant-filled-warning" on:click={addPlayerToCurrentGame} disabled={playerId === undefined || playerId === '0'}>Add</button>
+  <button class="btn variant-ghost-success mt-2 disabled:variant-filled-warning"
+          on:click={addPlayerToCurrentGame}
+          {playerSelected}>Add</button>
 </div>
 <!--Players in the current game-->
 <div class="flex flex-col text-center mt-4">
