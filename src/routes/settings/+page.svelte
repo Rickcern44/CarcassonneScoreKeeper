@@ -1,12 +1,6 @@
 <script>
-  import { LightSwitch, modeCurrent } from "@skeletonlabs/skeleton";
+  import { LightSwitch } from "@skeletonlabs/skeleton";
 
-  export let data
-  let darkMode = $modeCurrent
-
-  async function getCurrentState(){
-    darkMode = $modeCurrent;
-  }
 </script>
 
 <div class="flex flex-col mt-2">
@@ -18,7 +12,7 @@
       <p>Dark Mode:</p>
     </div>
     <div class="flex w-1/2 text-center justify-center">
-      <LightSwitch on:click={getCurrentState}/>
+      <LightSwitch />
     </div>
   </div>
 </div>
