@@ -1,5 +1,6 @@
 <script>
   import { LightSwitch } from "@skeletonlabs/skeleton";
+
 </script>
 
 <div class="flex flex-col mt-2">

@@ -1,11 +1,8 @@
-import type { PageServerLoad } from './$types';
-import { database } from "$lib/db";
-import { error as svelteError } from "@sveltejs/kit";
+import type { PageServerLoad } from "./$types";
 
-export async function load(){
-  const {data : players , error} = await database.from("Players").select('*')
+export const load = (async ({locals: {supabase}}) => {
+  const {data : players , error} = await supabase.from("Players").select('*')
 
-  if(error) throw svelteError(404)
+  return {players, error}
 
-  return {players}
-}
+}) satisfies PageServerLoad

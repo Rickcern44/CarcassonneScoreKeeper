@@ -45,6 +45,7 @@
 		"@supabase/auth-ui-react": "^0.4.2",
 		"@supabase/auth-ui-shared": "^0.1.6",
 		"@supabase/auth-ui-svelte": "^0.2.2",
-		"@supabase/supabase-js": "^2.26.0"
+		"@supabase/supabase-js": "^2.26.0",
+		"@vercel/kv": "^0.2.2"
 	}
 }
