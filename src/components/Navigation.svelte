@@ -11,6 +11,7 @@
   const logout = async () => {
     await supabase.auth.signOut()
     await invalidateAll();
+    drawerClose();
   }
 </script>
 
