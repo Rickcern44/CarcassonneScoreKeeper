@@ -9,6 +9,8 @@
   let availablePlayers = [];
   let currentPlayers = [];
   let playerId;
+  let gameReady: string | undefined = currentPlayers.length !== 0 ? 'disabled' : undefined
+  let playerSelected : string | undefined = playerId === undefined || playerId === '0' ? 'disabled': undefined
   // load events
   onMount(() => {
     availablePlayers = data.players;
@@ -24,7 +26,7 @@
     let selectedPlayer = availablePlayers.find(x => x.id === playerId)
 
 
-    if (currentPlayers.length === 2){
+    if (currentPlayers.length === 6){
       toastStore.trigger(failureToast);
 
     }
@@ -62,7 +64,9 @@
         <option value={player.id}>{player.name}</option>
       {/each }
   </select>
-  <button class="btn bg-green-200 mt-2 disabled:bg-yellow-200" on:click={addPlayerToCurrentGame} disabled={playerId === undefined || playerId === '0'}>Add</button>
+  <button class="btn variant-ghost-success mt-2 disabled:variant-filled-warning"
+          on:click={addPlayerToCurrentGame}
+          {playerSelected}>Add</button>
 </div>
 <!--Players in the current game-->
 <div class="flex flex-col text-center mt-4">
@@ -73,7 +77,8 @@
       <span class="placeholder-circle w-16"></span>
       <span class="flex-auto">{player.name}</span>
       <span class="flex-auto" >
-        <button on:click={() => removePlayerFromGame(player.id)}>
+        <button
+                on:click={() => removePlayerFromGame(player.id)}>
           <TrashIcon size="2x" />
         </button>
       </span>
@@ -82,6 +87,6 @@
   </ul>
 </div>
 <div class="flex">
-  <button class="btn bg-gray-500 flex-auto mt-5">Start Game</button>
+  <button class="btn variant-ghost-success mt-2 disabled:variant-filled-warning flex-auto" {gameReady}>Start Game</button>
 </div>
 

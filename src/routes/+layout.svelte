@@ -1,10 +1,10 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import { invalidate } from '$app/navigation'
+  import { onMount } from 'svelte'
 
   // Skeleton Features
-  import { AppShell, AppBar, Toast, popup,storePopup, Drawer, drawerStore, LightSwitch } from "@skeletonlabs/skeleton";
-  import type {PopupSettings} from "@skeletonlabs/skeleton";
-  import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
+  import { AppShell, AppBar, Toast, Drawer, drawerStore } from "@skeletonlabs/skeleton";
 
   // Icons
   import { SettingsIcon } from 'svelte-feather-icons'
@@ -16,17 +16,30 @@
   import '@skeletonlabs/skeleton/themes/theme-hamlindigo.css';
   import '@skeletonlabs/skeleton/styles/skeleton.css';
   import "../app.css";
+  import{ PUBLIC_ENVIRONMENT } from '$env/static/public'
 
-  storePopup.set({ computePosition, autoUpdate, offset, shift, flip, arrow });
 
-  const settingsPopup: PopupSettings = {
-    event: 'click',
-    target: 'settingsPopup',
-    placement: 'bottom',
-  }
   function drawerOpen(): void {
     drawerStore.open({});
   }
+  export let data
+
+  if(PUBLIC_ENVIRONMENT === 'Development'){
+    console.log(data?.session)
+  }
+
+  let { supabase, session } = data
+  $: ({ supabase, session } = data)
+
+  onMount(() => {
+    const { data } = supabase.auth.onAuthStateChange((event, _session) => {
+      if (_session?.expires_at !== session?.expires_at) {
+        invalidate('supabase:auth')
+      }
+    })
+
+    return () => data.subscription.unsubscribe()
+  })
 
   // Reactive Properties
   $: classesSidebarLeft = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-64';
@@ -34,9 +47,9 @@
 
 <!-- Drawer -->
 <Drawer>
-  <h2 class="p-4">Navigation</h2>
+  <h2 class="p-4">{data?.session?.user?.email ?? 'Not Signed In'}</h2>
   <hr />
-  <Navigation />
+  <Navigation supabase={supabase}/>
 </Drawer>
 
 <!-- App Shell -->
@@ -55,13 +68,15 @@
 							</svg>
 						</span>
           </button>
-          <strong class="text-xl uppercase">Carc Keeper</strong>
+          <a href="/home">
+            <strong class="text-xl uppercase">Carc Keeper</strong>
+          </a>
         </div>
       </svelte:fragment>
       <svelte:fragment slot="trail">
-        <button use:popup={settingsPopup}>
+        <a href="settings">
           <SettingsIcon size="2x"/>
-        </button>
+        </a>
       </svelte:fragment>
     </AppBar>
   </svelte:fragment>
@@ -72,12 +87,6 @@
   <!-- Page Route Content -->
   <slot />
 </AppShell>
-
-<!--Popup Design-->
-<div class="card p-4 w-72 shadow-xl" data-popup="settingsPopup">
-  <LightSwitch />
-  <a href="/settings">Settings</a>
-</div>
 
 <Toast />
 

@@ -1,11 +1,20 @@
-<script>
+<script lang="ts">
   import "../app.css";
+  import Authentication from "../components/Authentication.svelte";
+
+  export let data
+
+  let {supabase} = data.supabase
+
 </script>
+<svelte:head>
+  <title>Login</title>
+</svelte:head>
 
-<div class="flex flex-col items-center justify-center h-screen mainPage mx-auto">
-  <h1 class="h1 mx-4">Welcome to Carc Keeper</h1>
-  <p class="text-center ml-2 mr-2">Welcome to the Carcassonne scorekeeper app this app lets you add players and keep score</p>
-</div>
-
+<section class="flex container h-2/3 justify-center">
+  <div class="flex flex-center self-center">
+    <Authentication />
+  </div>
+</section>
 
 
