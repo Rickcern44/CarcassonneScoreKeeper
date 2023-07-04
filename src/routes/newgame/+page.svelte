@@ -67,13 +67,13 @@
     // Remove players from available players
     currentPlayers = [...currentPlayers]
     // Reset the player dropdown to select player option
-    playerId = "0";
+    selectedPlayerId = "0";
   }
-  const changeDisabledState = (state: boolean, variableName: string ) => {
+  const changeDisabledState = (state: boolean, variableName = '' ) => {
     if(variableName === 'colorSelect') {
       colorDisabled = state;
     }
-    else if(variableName === 'addPlayer' && colorId !== "0"){
+    else if(variableName === 'addPlayer' && selectedColorId !== "0"){
       disabled = false;
     }
     else{

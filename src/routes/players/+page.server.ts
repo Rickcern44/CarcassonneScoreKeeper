@@ -18,11 +18,10 @@ export const actions ={
       .select('*', {count: 'exact', head: true})
       .eq('name', formData.get('name'))
 
-    let error;
-    if(formData && count == 0){
-      const {data: playerData, error} = await supabase.from('Players').insert({name: formData.get('name')})
-    }else{
-      console.warn('Erorr inserting player',error)
+    if (count === 0){
+      const {data, error} = await supabase.from('Players').insert({name: formData.get('name')})
+      return {data, error}
     }
+
   }
 } satisfies Actions
