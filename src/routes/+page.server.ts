@@ -1,4 +1,4 @@
-import { redirect } from '@sveltejs/kit'
+import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load = (async ({ url, locals: { getSession } }) => {
@@ -22,8 +22,7 @@ export const actions = {
       const {error} = await supabase.auth.signInWithPassword({email: email.toString(), password: password.toString()})
 
         if(error){
-          //TODO: Replace with actual error handling
-          console.log(error)
+          return fail(400, {error, success: false})
       }
     }
   },

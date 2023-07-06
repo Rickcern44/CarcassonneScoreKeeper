@@ -3,6 +3,9 @@
   import {TrashIcon} from 'svelte-feather-icons'
   import type { ToastSettings } from "@skeletonlabs/skeleton";
   import { toastStore } from "@skeletonlabs/skeleton";
+  import { removePlayerFromGame } from '$lib/services/newGameService'
+  import type { GameColor, PlayerColor } from "../../types/color.type";
+
 
   // props
   export let data;
@@ -10,14 +13,6 @@
   let colorDisabled = true;
   // variables
   let availablePlayers = [];
-  let availableColors = [
-    {id: '1', color: 'red'},
-    {id: '2', color: 'black'},
-    {id: '3', color: 'green'},
-    {id: '4', color: 'yellow'},
-    {id: '5', color: 'blue'},
-    {id: '6', color: 'pink'},
-  ];
   let selectedColors = [];
   let currentPlayers = [];
 
@@ -36,39 +31,8 @@
     background: 'variant-filled-warning',
   };
 
-  const addPlayerToCurrentGame = (playerId: string, colorId: string) => {
-    let selectedPlayer = availablePlayers.find(x => x.id === playerId)
-    let selectedColor = availableColors.find(x => x.id === colorId)
-    let colorToAdd = { id: selectedColor?.id, color: selectedColor?.color, playerId: selectedPlayer.id }
 
-    if (currentPlayers.length === 6){
-      toastStore.trigger(failureToast);
-    }
-    else{
-      availablePlayers = availablePlayers.filter(x => x.id != playerId)
-
-      // Add Player to current players and selected Colors
-      currentPlayers = [...currentPlayers, selectedPlayer]
-      selectedColors = [...selectedColors, colorToAdd]
-      // Remove players from available players
-      availablePlayers = [...availablePlayers]
-      availableColors = [...availableColors]
-
-      playerId = "0";
-      colorId = "0";
-    }
-  }
-  const removePlayerFromGame = (id: string) => {
-    let selectedPlayer = currentPlayers.find(x => x.id === id)
-    currentPlayers = currentPlayers.filter(x => x.id != id)
-
-    // Add Player to current players
-    availablePlayers = [...availablePlayers, selectedPlayer]
-    // Remove players from available players
-    currentPlayers = [...currentPlayers]
-    // Reset the player dropdown to select player option
-    selectedPlayerId = "0";
-  }
+  removePlayerFromGame(selectedPlayerId, availablePlayers, currentPlayers)
   const changeDisabledState = (state: boolean, variableName = '' ) => {
     if(variableName === 'colorSelect') {
       colorDisabled = state;
