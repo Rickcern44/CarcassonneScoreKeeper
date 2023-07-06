@@ -2,9 +2,7 @@
   import { onMount } from "svelte";
   import {TrashIcon} from 'svelte-feather-icons'
   import type { ToastSettings } from "@skeletonlabs/skeleton";
-  import { toastStore } from "@skeletonlabs/skeleton";
   import { removePlayerFromGame } from '$lib/services/newGameService'
-  import type { GameColor, PlayerColor } from "../../types/color.type";
 
 
   // props

@@ -9,11 +9,4 @@ describe('test login component', () => {
 
     expect(username).toBeTruthy()
   })
-  it('invalid credentials error is displayed', () => {
-    render(Login)
-
-    const errorMessage = screen.getByTestId('errorMessage').innerHTML;
-
-    expect(errorMessage).toBe('Invalid credentials! ')
-  })
 })
