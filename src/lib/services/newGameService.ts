@@ -1,37 +1,49 @@
-import type { Player } from "../../types/player.type";
+import type { Player } from '../../types/player.type';
+import type { GameColor } from "../../types/enums/gamecolor.enum";
 
+export const removePlayerFromGame = (id: string, availablePlayerList: Array<Player>, currentPlayerList: Array<Player>) => {
+	const selectedPlayer: Player | undefined = availablePlayerList.find((x) => x.id === id);
+	currentPlayerList = currentPlayerList.filter((x) => x?.id !== id);
 
-export const removePlayerFromGame = (id: string, availablePlayerList: Array<Player | undefined> ,currentPlayerList: Array<Player | undefined>) => {
-    const selectedPlayer: Player | undefined = availablePlayerList.find(x => x?.id === id)
-    availablePlayerList = availablePlayerList.filter(x => x?.id !== id)
+	if (selectedPlayer === undefined) {
+		return {
+			available: availablePlayerList,
+			current: currentPlayerList,
+			success: { state: false, message: 'Player not found' }
+		};
+	}
 
-    // Add Player to current players
-    currentPlayerList = [...currentPlayerList, selectedPlayer]
-    // Remove players from available players
-    availablePlayerList = [...availablePlayerList]
+	availablePlayerList = [...availablePlayerList, selectedPlayer];
+	currentPlayerList = [...currentPlayerList];
 
-    return {avail: availablePlayerList, curr: currentPlayerList, success: true}
-  }
+	return {
+		available: availablePlayerList,
+		current: currentPlayerList,
+		success: { state: true, message: 'Player Removed from Game!' }
+	};
+};
 
-// export const addPlayerToCurrentGame = (playerId: string, colorId: string, availablePlayerList: Array<Player | undefined> ,currentPlayerList: Array<Player | undefined>) => {
-//     const selectedPlayer = availablePlayerList.find(x => x?.id === playerId)
-//     const selectedColor = availableColors.find(x => x.id === colorId)
-//     const colorToAdd : PlayerColor = {colorId: selectedColor.colorId, playerId: selectedPlayer?.id, name: selectedColor.name}
-//
-//     if (currentPlayerList.length === 6){
-//         return {success: false, error: 'Too many Players'}
-//     }
-//     else{
-//         availablePlayers = availablePlayers.filter(x => x.id != playerId)
-//
-//         // Add Player to current players and selected Colors
-//         currentPlayers = [...currentPlayers, selectedPlayer]
-//         selectedColors = [...selectedColors, colorToAdd]
-//         // Remove players from available players
-//         availablePlayers = [...availablePlayers]
-//         availableColors = [...availableColors]
-//
-//         playerId = "0";
-//         colorId = "0";
-//     }
-// }
+export const addPlayerToGame = (playerId: string, playerColor: GameColor, availablePlayerList: Array<Player>, currentPlayerList: Array<Player>) => {
+	const selectedPlayer: Player | undefined = availablePlayerList.find((x) => x.id === playerId);
+
+	if (selectedPlayer === undefined) {
+		return {
+			available: availablePlayerList,
+			current: currentPlayerList,
+			success: { state: false, message: 'Player not found' }
+		};
+	}
+
+	selectedPlayer.color = playerColor;
+
+	currentPlayerList = [...currentPlayerList, selectedPlayer];
+
+	availablePlayerList = availablePlayerList.filter((x) => x.id !== selectedPlayer.id);
+	availablePlayerList = [...availablePlayerList];
+
+	return {
+		available: availablePlayerList,
+		current: currentPlayerList,
+		success: { state: true, message: 'Player Added to Game!' }
+	};
+};

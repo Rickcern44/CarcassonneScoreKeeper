@@ -6,8 +6,8 @@ export default defineConfig({
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}'],
 		coverage: {
-			provider: "istanbul",
-			reporter: ['text', 'json', "json-summary",'html'],
+			provider: "v8",
+			reporter: ['html'],
 			lines: 60,
 			statements: 60,
 			functions: 60,

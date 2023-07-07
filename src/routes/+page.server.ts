@@ -36,7 +36,6 @@ export const actions = {
         email: email.toString(), password: password.toString(), options: {emailRedirectTo: '/auth/callback'}
       })
       if(error){
-        //TODO: Replace with actual error handling
         console.log(error)
       }
     }

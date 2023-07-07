@@ -5,6 +5,8 @@
 
   // Skeleton Features
   import { AppShell, AppBar, Toast, Drawer, drawerStore } from "@skeletonlabs/skeleton";
+  import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
+  import { storePopup } from '@skeletonlabs/skeleton';
 
   // Icons
   import { SettingsIcon } from 'svelte-feather-icons'
@@ -18,7 +20,7 @@
   import "../app.css";
   import{ PUBLIC_ENVIRONMENT } from '$env/static/public'
 
-
+  storePopup.set({ computePosition, autoUpdate, offset, shift, flip, arrow });
   function drawerOpen(): void {
     drawerStore.open({});
   }
