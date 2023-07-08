@@ -2,17 +2,22 @@
   import { onMount } from "svelte";
   import {TrashIcon} from 'svelte-feather-icons'
   import type { ToastSettings } from "@skeletonlabs/skeleton";
-  import { removePlayerFromGame } from '$lib/services/newGameService'
+  import {addPlayerToGame, removePlayerFromGame} from '$lib/services/newGameService'
+  import type {Player} from "../../types/player.type";
+  import type {GameColor} from "../../types/enums/gamecolor.enum";
+  import {GameColor as GameColors} from "../../types/enums/gamecolor.enum";
+  import type {SelectOption} from "../../types/selectOption.type";
+  import mapEnumToSelect from "$lib/helpers/enumHelpers";
 
 
   // props
   export let data;
+  let availableColors: Array<SelectOption> = mapEnumToSelect(GameColors)
   let disabled = true;
   let colorDisabled = true;
   // variables
-  let availablePlayers = [];
-  let selectedColors = [];
-  let currentPlayers = [];
+  let availablePlayers: Array<Player> = [];
+  let currentPlayers: Array<Player> = [];
 
   // Current Selected Player and Color
   let selectedPlayerId = "0";
@@ -28,7 +33,23 @@
     message: 'Unable to add Additional players to game!',
     background: 'variant-filled-warning',
   };
+  const successToast: ToastSettings = {
+    message: 'Unable to add Additional players to game!',
+    background: 'variant-filled-warning',
+  };
 
+  const addPlayer = () => {
+    let {current, available, success} = addPlayerToGame(selectedPlayerId, selectedColorId as unknown as GameColor, availablePlayers,currentPlayers)
+
+    availablePlayers = available;
+    currentPlayers = current;
+
+    selectedPlayerId = "0";
+    selectedColorId = "0"
+  }
+  const removePlayer = () => {
+    console.log('Remove Player from game')
+  }
 
   removePlayerFromGame(selectedPlayerId, availablePlayers, currentPlayers)
   const changeDisabledState = (state: boolean, variableName = '' ) => {
@@ -60,11 +81,11 @@
   <select class="select" bind:value={selectedColorId} disabled={ colorDisabled }>
     <option value="0" selected>Select Color</option>
     {#each availableColors as color}
-      <option value={color.id}>{color.color}</option>
+      <option value={color.value}>{color.name}</option>
     {/each }
   </select>
   <button class="btn variant-outline-success mt-2 disabled:variant-outline-warning"
-          on:click={addPlayerToCurrentGame}
+          on:click={addPlayer}
           {disabled}
   >Add</button>
 </div>
@@ -78,7 +99,7 @@
       <span class="flex-auto">{player.name}</span>
       <span class="flex-auto" >
         <button
-                on:click={() => removePlayerFromGame(player.id)}>
+                on:click={() => removePlayer}>
           <TrashIcon size="2x" />
         </button>
       </span>

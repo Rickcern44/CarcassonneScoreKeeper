@@ -5,7 +5,14 @@
 
   // Skeleton Features
   import { AppShell, AppBar, Toast, Drawer, drawerStore } from "@skeletonlabs/skeleton";
-  import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
+  import {
+      computePosition,
+      autoUpdate,
+      offset,
+      shift,
+      flip,
+      arrow
+  } from '@floating-ui/dom';
   import { storePopup } from '@skeletonlabs/skeleton';
 
   // Icons
@@ -30,8 +37,7 @@
     console.log(data?.session)
   }
 
-  let { supabase, session } = data?
-  $: ({ supabase, session } = data)
+  let { supabase, session } = data;
 
   onMount(() => {
     const { data } = supabase.auth.onAuthStateChange((event, _session) => {
@@ -44,7 +50,7 @@
   })
 
   // Reactive Properties
-  $: classesSidebarLeft = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-64';
+  $: classesSidebarLeft = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-64'
 </script>
 
 <!-- Drawer -->

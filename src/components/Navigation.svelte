@@ -1,8 +1,9 @@
 <script lang="ts">
   import { drawerStore } from '@skeletonlabs/skeleton';
   import { invalidateAll } from "$app/navigation";
+  import type {SupabaseClient} from "@supabase/supabase-js";
 
-  export let supabase;
+  export let supabase: SupabaseClient;
 
   function drawerClose(): void {
     drawerStore.close();

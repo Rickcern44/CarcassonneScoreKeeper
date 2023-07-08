@@ -1,5 +1,4 @@
 <script>
-  export let form;
 </script>
 
 <form method="post" action="/?/login" >
@@ -14,6 +13,5 @@
     </div>
   </div>
   <button type="submit" class="btn flex flex-auto variant-ghost-primary mt-5">Login</button>
-  <p>{form?.error}</p>
 </form>
 
