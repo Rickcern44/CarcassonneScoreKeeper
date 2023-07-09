@@ -14,3 +14,5 @@ vite.config.ts.timestamp-*
 /.idea/vcs.xml
 /.idea/modules.xml
 /coverage/
+/test-results/results.xml
+/test-results/
