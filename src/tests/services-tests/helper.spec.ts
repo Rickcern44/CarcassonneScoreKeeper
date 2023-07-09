@@ -5,7 +5,7 @@ import type {SelectOption} from "../../types/selectOption.type";
 
 describe('enum mapping tests', () => {
     it('map game color to select option', () => {
-        const options = mapEnumToSelect(GameColor)
+        const options: Array<SelectOption> = mapEnumToSelect(GameColor)
 
         expect(options[1].name).toBe("red")
         expect(options[1].value).toBe("1")
