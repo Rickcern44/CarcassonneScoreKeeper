@@ -1,0 +1,42 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
+	"files": {
+		"includes": [
+			"**",
+			"!!.conveyor",
+			"!!.DS_Store",
+			"!!node_modules",
+			"!!build",
+			"!!.svelte-kit",
+			"!!package",
+			"!!.env",
+			"!!.env.*",
+			"!!pnpm-lock.yaml",
+			"!!package-lock.json",
+			"!!yarn.lock"
+		]
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"html": {
+		"experimentalFullSupportEnabled": true,
+		"formatter": {
+			"enabled": true
+		}
+	},
+	"linter": {
+		"rules": {
+			"suspicious": {
+				"noUnknownAtRules": {
+					"level": "error",
+					"options": {
+						"ignore": ["tailwind"]
+					}
+				}
+			}
+		}
+	}
+}
