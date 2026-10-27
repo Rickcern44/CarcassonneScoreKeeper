@@ -19,4 +19,4 @@ require_confirmation_for = ["push", "open_pr", "merge", "deploy"]
 [agents]
 planner = "claude"
 implementer = "codex"
-reviewer = "codex"
+reviewer = "claude"
