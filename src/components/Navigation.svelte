@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { getDrawerStore } from '@skeletonlabs/skeleton';
-	import { invalidateAll } from '$app/navigation';
-	import type { SupabaseClient } from '@supabase/supabase-js';
+import { getDrawerStore } from "@skeletonlabs/skeleton";
+import { invalidateAll } from "$app/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-	export let supabase: SupabaseClient;
-	const drawerStore = getDrawerStore();
+export let supabase: SupabaseClient;
+const drawerStore = getDrawerStore();
 
-	function drawerClose(): void {
-		drawerStore.close();
-	}
+function drawerClose(): void {
+	drawerStore.close();
+}
 
-	const logout = async () => {
-		await supabase.auth.signOut();
-		await invalidateAll();
-		drawerClose();
-	};
+const logout = async () => {
+	await supabase.auth.signOut();
+	await invalidateAll();
+	drawerClose();
+};
 </script>
 
 <nav class="list-nav p-4">

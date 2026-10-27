@@ -1,55 +1,55 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { invalidate } from '$app/navigation';
-	import { onMount } from 'svelte';
+import { page } from "$app/stores";
+import { invalidate } from "$app/navigation";
+import { onMount } from "svelte";
 
-	// Skeleton Features
-	import {
-		AppShell,
-		AppBar,
-		Toast,
-		Drawer,
-		getDrawerStore,
-		initializeStores
-	} from '@skeletonlabs/skeleton';
+// Skeleton Features
+import {
+	AppShell,
+	AppBar,
+	Toast,
+	Drawer,
+	getDrawerStore,
+	initializeStores,
+} from "@skeletonlabs/skeleton";
 
-	// Icons
-	import { SettingsIcon } from 'svelte-feather-icons';
+// Icons
+import { SettingsIcon } from "svelte-feather-icons";
 
-	// Local Features
-	import Navigation from '../components/Navigation.svelte';
+// Local Features
+import Navigation from "../components/Navigation.svelte";
 
-	// Stylesheets
-	import '../app.css';
-	import { env } from '$env/dynamic/public';
+// Stylesheets
+import "../app.css";
+import { env } from "$env/dynamic/public";
 
-	initializeStores();
-	const drawerStore = getDrawerStore();
+initializeStores();
+const drawerStore = getDrawerStore();
 
-	function drawerOpen(): void {
-		drawerStore.open({});
-	}
-	export let data;
+function drawerOpen(): void {
+	drawerStore.open({});
+}
+export let data;
 
-	if (env.PUBLIC_ENVIRONMENT === 'Development') {
-		console.log(data?.session);
-	}
+if (env.PUBLIC_ENVIRONMENT === "Development") {
+	console.log(data?.session);
+}
 
-	let { supabase, session } = data;
-	$: ({ supabase, session } = data);
+let { supabase, session } = data;
+$: ({ supabase, session } = data);
 
-	onMount(() => {
-		const { data } = supabase.auth.onAuthStateChange((event, _session) => {
-			if (_session?.expires_at !== session?.expires_at) {
-				invalidate('supabase:auth');
-			}
-		});
-
-		return () => data.subscription.unsubscribe();
+onMount(() => {
+	const { data } = supabase.auth.onAuthStateChange((event, _session) => {
+		if (_session?.expires_at !== session?.expires_at) {
+			invalidate("supabase:auth");
+		}
 	});
 
-	// Reactive Properties
-	$: classesSidebarLeft = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-64';
+	return () => data.subscription.unsubscribe();
+});
+
+// Reactive Properties
+$: classesSidebarLeft = $page.url.pathname === "/" ? "w-0" : "w-0 lg:w-64";
 </script>
 
 <!-- Drawer -->

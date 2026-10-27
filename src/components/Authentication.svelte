@@ -1,9 +1,9 @@
 <script>
-	import Login from './Login.svelte';
-	import { SignUp } from '@supabase/auth-ui-svelte';
+import Login from "./Login.svelte";
+import { SignUp } from "@supabase/auth-ui-svelte";
 
-	export let supabase;
-	let state = 'signIn';
+export let supabase;
+let state = "signIn";
 </script>
 
 {#if state === 'signIn'}

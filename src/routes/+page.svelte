@@ -1,10 +1,10 @@
 <script lang="ts">
-	import '../app.css';
-	import Authentication from '../components/Authentication.svelte';
+import "../app.css";
+import Authentication from "../components/Authentication.svelte";
 
-	export let data;
+export let data;
 
-	let { supabase } = data;
+let { supabase } = data;
 </script>
 
 <svelte:head>

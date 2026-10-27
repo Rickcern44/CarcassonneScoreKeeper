@@ -1,5 +1,4 @@
 <script>
-
 </script>
 
 <form method="post" action="/?/login" >

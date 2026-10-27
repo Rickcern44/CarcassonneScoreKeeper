@@ -1,25 +1,27 @@
 /** @type {import('tailwindcss').Config} */
 
-const { skeleton } = require('@skeletonlabs/tw-plugin');
+const { skeleton } = require("@skeletonlabs/tw-plugin");
 
 module.exports = {
 	// 1. Apply the dark mode class setting:
-	darkMode: 'class',
+	darkMode: "class",
 	content: [
-		'./src/**/*.{html,js,svelte,ts}',
+		"./src/**/*.{html,js,svelte,ts}",
 		// 2. Append the path for the Skeleton NPM package and files:
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		require('path').join(require.resolve('@skeletonlabs/skeleton'), '../**/*.{html,js,svelte,ts}')
+		require("path").join(
+			require.resolve("@skeletonlabs/skeleton"),
+			"../**/*.{html,js,svelte,ts}",
+		),
 	],
 	theme: {
-		extend: {}
+		extend: {},
 	},
 	plugins: [
-		require('@tailwindcss/forms'),
+		require("@tailwindcss/forms"),
 		skeleton({
 			themes: {
-				preset: ['hamlindigo']
-			}
-		})
-	]
+				preset: ["hamlindigo"],
+			},
+		}),
+	],
 };

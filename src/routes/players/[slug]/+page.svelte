@@ -1,12 +1,12 @@
 <script>
-  import { ArrowLeftIcon, EditIcon} from 'svelte-feather-icons'
-  export let data;
+import { ArrowLeftIcon, EditIcon } from "svelte-feather-icons";
+export let data;
 
-  let formattedDate = new Date(data?.created_at).toLocaleDateString()
+let formattedDate = new Date(data?.created_at).toLocaleDateString();
 
-  const editPlayer = () => {
-    console.warn('Editing Player')
-  }
+const editPlayer = () => {
+	console.warn("Editing Player");
+};
 </script>
 <div class="mb-4 flex mt-4">
   <div class="flex w-1/2 justify-center">

@@ -29,7 +29,7 @@ Use a Supabase public client key, never a service-role key in a `PUBLIC_` variab
 
 ```sh
 npm run check             # Svelte and TypeScript checks
-npm run lint              # Prettier and ESLint
+npm run lint              # Biome formatting and lint checks
 npm run test:unit -- --run # Vitest, single run
 npm run playwright-test   # Playwright; builds and starts a preview server
 npm run build
