@@ -12,7 +12,7 @@ This is a source review snapshot, not a verified runtime or security audit. Sugg
 
 ## What exists
 
-- SvelteKit app with Supabase client/session setup (`src/hooks.server.ts`, `src/routes/+layout.ts`). The root route contains authentication UI; `/home` checks for a session.
+- SvelteKit 2 / Svelte 5 app with Supabase SSR client/session setup (`src/hooks.server.ts`, `src/routes/+layout.ts`). The root route contains authentication UI; `/home` checks for a session. Server hooks, loads, and actions are bundled into the SvelteKit app, not a separate API.
 - `/players` reads and inserts into the Supabase `Players` table; `/players/[slug]` reads a player by ID.
 - `/newgame` loads players and presents player/color selection. Its Start Game button has no handler, and `src/lib/services/newGameService.ts` is empty. There is no complete scoring or game-history flow apparent in the repository.
 - The unit test is an arithmetic example, and the Playwright test expects the starter heading `Welcome to SvelteKit` rather than the current root page (`src/index.test.ts`, `tests/test.ts`).
@@ -37,4 +37,4 @@ This is a source review snapshot, not a verified runtime or security audit. Sugg
 
 ## Validation status
 
-This assessment is based on repository inspection. Build, type checks, lint, and tests have not been run as part of this snapshot; installed dependencies, environment variables, Supabase configuration, and browser availability may affect results.
+The SvelteKit framework upgrade was verified with Node 24.14.0. `npm install`, `npm run build`, and `npm run test:unit -- --run` pass. The build output includes `entries/hooks.server.js` and route-level `+page.server` entries. `npm run check` still has 14 errors isolated to the pre-existing `/newgame` player/color UI (implicit array types, nullable data, and its click handler signature); these predate the upgrade and are outside this scope. `npm run lint` still reports pre-existing formatting across the source tree and Conveyor packet files. Playwright's existing starter test requires configured Supabase environment values and browser dependencies; its pre-upgrade build failed when those values were absent. Installed dependencies, environment variables, Supabase configuration, and browser availability may affect runtime behavior.

@@ -10,3 +10,6 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 .env.local
+
+# ignore the local cnoveyor files
+/.conveyor/

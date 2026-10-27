@@ -8,10 +8,10 @@ The app has Supabase authentication, a player list and creation form, and an ear
 
 ## Local development
 
-The project uses SvelteKit, TypeScript, Tailwind CSS, Skeleton, and Supabase. Install a compatible Node.js/npm environment (no version is pinned in the repository), then:
+The project uses SvelteKit 2, Svelte 5, Vite 7, TypeScript, Tailwind CSS, Skeleton, and Supabase. It is one SvelteKit application: its hooks, server loads, and form actions run in the app server; no separately hosted API is required. Use Node.js 22.12 or later (the version required by Vite 7), then:
 
 ```sh
-npm ci
+npm install
 npm run dev
 ```
 
@@ -35,7 +35,7 @@ npm run playwright-test   # Playwright; builds and starts a preview server
 npm run build
 ```
 
-Playwright also requires its browser dependencies. Checks may require the environment variables above; the existing tests are starter examples, not coverage of the product. The repository's baseline has not yet been established; see the assessment before treating these commands as passing gates.
+Playwright also requires its browser dependencies. Checks may require the environment variables above; the existing tests are starter examples, not coverage of the product. See the assessment for the recorded upgrade baseline and known remaining check failures.
 
 ## Documentation
 
