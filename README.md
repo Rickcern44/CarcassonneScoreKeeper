@@ -1,38 +1,43 @@
-# create-svelte
+# Carcassonne Score Keeper
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+A work-in-progress scorekeeping tool for the board game Carcassonne. The intended outcome is to track players and scores during a game; the scoring workflow is not implemented yet.
 
-## Creating a project
+## Current state
 
-If you're seeing this, you've probably already done this step. Congrats!
+The app has Supabase authentication, a player list and creation form, and an early game setup screen. Starting a game, recording scores, and game history are not implemented in the current UI. See [repository assessment and next steps](docs/assessment.md) for evidence, risks, and open product questions.
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
+## Local development
 
-# create a new project in my-app
-npm create svelte@latest my-app
-```
+The project uses SvelteKit, TypeScript, Tailwind CSS, Skeleton, and Supabase. Install a compatible Node.js/npm environment (no version is pinned in the repository), then:
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
+```sh
+npm ci
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+The app imports these public environment variables from a local `.env` file:
 
-To create a production version of your app:
+```dotenv
+PUBLIC_SUPABASE_URL=your_supabase_project_url
+PUBLIC_SUPABASE_KEY=your_supabase_public_key
+PUBLIC_ENVIRONMENT=Development
+```
 
-```bash
+Use a Supabase public client key, never a service-role key in a `PUBLIC_` variable. `PUBLIC_ENVIRONMENT` is used for development logging. The app expects a Supabase `Players` table with at least `id` and `name`; its complete schema, policies, and setup are not recorded in this repository. Authentication and player functionality require an appropriately configured Supabase project. Do not assume that a fresh project will work without further setup.
+
+## Checks
+
+```sh
+npm run check             # Svelte and TypeScript checks
+npm run lint              # Prettier and ESLint
+npm run test:unit -- --run # Vitest, single run
+npm run playwright-test   # Playwright; builds and starts a preview server
 npm run build
 ```
 
-You can preview the production build with `npm run preview`.
+Playwright also requires its browser dependencies. Checks may require the environment variables above; the existing tests are starter examples, not coverage of the product. The repository's baseline has not yet been established; see the assessment before treating these commands as passing gates.
 
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+## Documentation
+
+- [Agent working instructions](agents.md)
+- [Repository assessment, suggested priorities, and open questions](docs/assessment.md)
