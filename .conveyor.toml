@@ -1,0 +1,22 @@
+[conveyor]
+version = 1
+remote = "origin"
+target_branch = "main"
+branch_pattern = "feat/{issue}-build"
+commit_message_pattern = "feat: issue #{issue}"
+verification_report_path = ".conveyor/reports/latest.json"
+
+[github]
+repository = "rickcern44/CarcassonneScoreKeeper"
+
+[workflow]
+ready_label = "conveyor:ready"
+in_progress_label = "conveyor:in-progress"
+blocked_label = "conveyor:blocked"
+draft_prs_only = true
+require_confirmation_for = ["push", "open_pr", "merge", "deploy"]
+
+[agents]
+planner = "claude"
+implementer = "codex"
+reviewer = "codex"
