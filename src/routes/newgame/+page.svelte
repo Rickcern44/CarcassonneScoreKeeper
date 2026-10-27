@@ -1,11 +1,12 @@
 <script lang="ts">
-import { onMount } from "svelte";
-import { TrashIcon } from "svelte-feather-icons";
 import type { ToastSettings } from "@skeletonlabs/skeleton";
 import { getToastStore } from "@skeletonlabs/skeleton";
+import { onMount } from "svelte";
+import { TrashIcon } from "svelte-feather-icons";
+import type { PageData } from "./$types";
 
 // props
-export let data;
+export let data: PageData;
 const toastStore = getToastStore();
 let disabled = true;
 let colorDisabled = true;
@@ -49,7 +50,7 @@ const addPlayerToCurrentGame = (playerId: string, colorId: string) => {
 	if (currentPlayers.length === 6) {
 		toastStore.trigger(failureToast);
 	} else {
-		availablePlayers = availablePlayers.filter((x) => x.id != playerId);
+		availablePlayers = availablePlayers.filter((x) => x.id !== playerId);
 
 		// Add Player to current players and selected Colors
 		currentPlayers = [...currentPlayers, selectedPlayer];
@@ -64,7 +65,7 @@ const addPlayerToCurrentGame = (playerId: string, colorId: string) => {
 };
 const removePlayerFromGame = (id: string) => {
 	let selectedPlayer = currentPlayers.find((x) => x.id === id);
-	currentPlayers = currentPlayers.filter((x) => x.id != id);
+	currentPlayers = currentPlayers.filter((x) => x.id !== id);
 
 	// Add Player to current players
 	availablePlayers = [...availablePlayers, selectedPlayer];
@@ -88,7 +89,11 @@ const changeDisabledState = (state: boolean, variableName = "") => {
 <!--Current available players-->
 <div class="flex flex-col">
 	<h2 class="h2 self-center mb-2">Add Players</h2>
-	<select class="select" bind:value={selectedPlayerId} on:change={() => changeDisabledState(false)}>
+	<select
+		class="select"
+		bind:value={selectedPlayerId}
+		on:change={() => changeDisabledState(false)}
+	>
 		<option value="0" selected>Select Player</option>
 		{#each availablePlayers as player}
 			<option value={player.id}>{player.name}</option>
@@ -102,10 +107,13 @@ const changeDisabledState = (state: boolean, variableName = "") => {
 		{/each}
 	</select>
 	<button
+		type="button"
 		class="btn variant-outline-success mt-2 disabled:variant-outline-warning"
 		on:click={addPlayerToCurrentGame}
-		{disabled}>Add</button
+		{disabled}
 	>
+		Add
+	</button>
 </div>
 <!--Players in the current game-->
 <div class="flex flex-col text-center mt-4">
@@ -116,7 +124,10 @@ const changeDisabledState = (state: boolean, variableName = "") => {
 				<span class="placeholder-amber-300 placeholder-circle w-16 ml-1"></span>
 				<span class="flex-auto">{player.name}</span>
 				<span class="flex-auto">
-					<button on:click={() => removePlayerFromGame(player.id)}>
+					<button
+						type="button"
+						on:click={() => removePlayerFromGame(player.id)}
+					>
 						<TrashIcon size="2x" />
 					</button>
 				</span>
@@ -126,7 +137,10 @@ const changeDisabledState = (state: boolean, variableName = "") => {
 </div>
 <div class="flex">
 	<button
+		type="button"
 		class="btn variant-outline-success mt-2 disabled:variant-outline-warning flex-auto"
-		disabled={currentPlayers.length === 0}>Start Game</button
+		disabled={currentPlayers.length === 0}
 	>
+		Start Game
+	</button>
 </div>

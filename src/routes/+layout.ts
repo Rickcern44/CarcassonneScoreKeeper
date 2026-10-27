@@ -1,8 +1,8 @@
-import { env } from "$env/dynamic/public";
 import { createBrowserClient } from "@supabase/ssr";
+import { env } from "$env/dynamic/public";
 import type { LayoutLoad } from "./$types";
 
-export const load = (async ({ fetch, data, depends }) => {
+export const load = (async ({ fetch, depends }) => {
 	depends("supabase:auth");
 
 	const supabase = createBrowserClient(
