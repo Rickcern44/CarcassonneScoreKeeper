@@ -23,6 +23,21 @@ APP_PASSWORD=choose-a-strong-shared-password
 
 Everyone signs in on `/` with this one password. Every other page redirects to `/` until the user signs in. Sessions are stored in an `httpOnly` cookie that lasts 30 days. The cookie is signed with the current password. To rotate the password, change `APP_PASSWORD` and restart the server; this signs out every existing session. If `APP_PASSWORD` is unset, login is refused. Never expose it as a `PUBLIC_` variable. Login is not yet rate limited, so add rate limiting and HTTPS before exposing the app publicly.
 
+### Running with Aspire (optional)
+
+An [Aspire](https://aspire.dev) TypeScript AppHost in `aspire-apphost/` starts the app and is where future services (such as a database) will be declared. It is optional; `npm run dev` still runs the app on its own. It currently registers only the SvelteKit app.
+
+Install the [Aspire CLI](https://aspire.dev/get-started/install-cli/), run `npm install` in `aspire-apphost/` once, and supply the shared password as an Aspire secret parameter:
+
+```sh
+cd aspire-apphost && npm install && cd ..
+aspire run                # or `aspire start` / `aspire stop`; opens the dashboard
+```
+
+On first run the dashboard prompts for the `app-password` parameter. To supply it non-interactively, set the environment variable `Parameters__app-password` (the hyphen means it must be set with `env "Parameters__app-password=..." aspire start`). Do not commit the value. Biome checks `apphost.mts`; `aspire-apphost/.aspire/` is generated and must not be edited.
+
+`aspire init` also installed Aspire agent skills in `.claude/skills/` (including `playwright-cli`). They are vendored third-party content and are excluded from Biome. The Aspire CLI sends usage telemetry for these skills; set `ASPIRE_CLI_TELEMETRY_OPTOUT=true` to opt out.
+
 Players are kept in server memory (`src/lib/services/playerService.ts`) and are lost when the server restarts. A persistent database is planned but not implemented.
 
 ## Checks

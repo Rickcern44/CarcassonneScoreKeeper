@@ -14,7 +14,10 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "vitest",
 		"lint": "biome check .",
-		"format": "biome format --write ."
+		"format": "biome format --write .",
+		"aspire:start": "npm --prefix aspire-apphost run aspire:start",
+		"aspire:build": "npm --prefix aspire-apphost run aspire:build",
+		"aspire:dev": "npm --prefix aspire-apphost run aspire:dev"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.6.3",
