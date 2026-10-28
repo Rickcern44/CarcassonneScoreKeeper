@@ -18,3 +18,7 @@ vite.config.ts.timestamp-*
 
 # Aspire generated restore cache
 /.aspire/
+
+# Playwright output
+/test-results/
+/playwright-report/
