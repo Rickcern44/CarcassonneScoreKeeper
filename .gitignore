@@ -13,3 +13,8 @@ vite.config.ts.timestamp-*
 
 # ignore the local cnoveyor files
 /.conveyor/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
+
+# Aspire generated restore cache
+/.aspire/

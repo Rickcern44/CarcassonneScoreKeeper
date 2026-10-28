@@ -4,6 +4,7 @@
 		"includes": [
 			"**",
 			"!!.conveyor",
+			"!!.claude",
 			"!!.DS_Store",
 			"!!node_modules",
 			"!!build",
@@ -13,7 +14,10 @@
 			"!!.env.*",
 			"!!pnpm-lock.yaml",
 			"!!package-lock.json",
-			"!!yarn.lock"
+			"!!yarn.lock",
+			"!!aspire-apphost/.aspire",
+			"!!aspire-apphost/node_modules",
+			"!!aspire-apphost/dist"
 		]
 	},
 	"css": {
