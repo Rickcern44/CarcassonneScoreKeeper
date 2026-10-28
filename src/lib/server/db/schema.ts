@@ -6,4 +6,6 @@ export const players = pgTable("players", {
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.notNull()
 		.defaultNow(),
+	// Set when a player is removed; the row stays so game history is intact.
+	archivedAt: timestamp("archived_at", { withTimezone: true }),
 });
