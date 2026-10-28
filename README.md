@@ -92,14 +92,18 @@ With Aspire, start the app host (`aspire start`), copy the Postgres connection s
 
 ## CI/CD and deployment
 
-Two GitHub Actions workflows, with no conditions to read: CI checks, CD releases.
+GitHub Actions, with no conditions to read: CI checks, CD builds an ephemeral staging, Release promotes to production.
 
-| Workflow                   | Runs on                               | What it does                                                                                                                              |
-| -------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `.github/workflows/ci.yml` | every pull request (and called by CD) | `check`, `lint`, unit tests, build, the login Playwright tests; the service tests and the e2e journey against Postgres service containers |
-| `.github/workflows/cd.yml` | every push to `main`                  | runs `ci.yml` first, then **Migrate and deploy**: applies new migrations to Neon, then deploys to Fly.io                                  |
+| Workflow                                 | Runs on                               | What it does                                                                                                                              |
+| ---------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/ci.yml`               | every pull request (and called by CD) | `check`, `lint`, unit tests, build, the login Playwright tests; the service tests and the e2e journey against Postgres service containers |
+| `.github/workflows/cd.yml`               | every push to `main`                  | runs `ci.yml`, then **Deploy staging**: a fresh Neon branch of the production database, migrated, plus a Fly app `<app>-staging`          |
+| `.github/workflows/release.yml`          | started by hand (Actions tab)         | **Migrate and deploy production** for a ref (default `main`), then calls the teardown workflow                                            |
+| `.github/workflows/staging-teardown.yml` | after a release, or by hand           | destroys the staging Fly app and deletes the `staging` Neon branch                                                                        |
 
-If CI fails, nothing is released. The release job runs `node scripts/migrate.mjs` against Neon (using `MIGRATE_DATABASE_URL`, falling back to `DATABASE_URL`), then sets the app's secrets, runs `flyctl deploy --remote-only` (Fly builds the `Dockerfile`, a SvelteKit `adapter-node` server), and requests the live login page to confirm it is up. A failed migration stops the release before the new code ships. Releases are serialized and never cancelled half way. Fly settings (region, machine size, health check, one always-on machine) live in `fly.toml`.
+If CI fails, no staging is built. Staging is **ephemeral**: each merge deletes the previous `staging` Neon branch and creates a new one from production (copy-on-write, so it holds a copy of the real data and rehearses the migration against it), runs `scripts/migrate.mjs` on it, and deploys to `https://<app>-staging.fly.dev` with the same login password. The branch also expires after 14 days by itself. When staging looks right, run the **Release** workflow: it migrates production (`MIGRATE_DATABASE_URL`, falling back to `DATABASE_URL`), deploys with `flyctl deploy --remote-only` (Fly builds the `Dockerfile`, a SvelteKit `adapter-node` server), smoke tests the login page, then tears staging down. A failed migration stops the release before the new code ships. Deploys are serialized and never cancelled half way. The shared deploy steps live in `.github/actions/fly-deploy`. Fly settings (region, machine size, health check) live in `fly.toml`; each app runs a single machine.
+
+Release builds the chosen ref again from source rather than reusing the staging image, so release the commit staging is running (the default `main` is that commit unless something merged since).
 
 Because the database is migrated before the new code goes live (and the previous version keeps serving until then), keep migrations backward compatible: add columns and tables; do not drop or rename in the same release as the code that stops using them. If a deploy fails after its migration ran, the database stays ahead of the running code, which is safe for additive migrations.
 
@@ -107,27 +111,30 @@ Because the database is migrated before the new code goes live (and the previous
 
 Infrastructure is not managed as code yet, so these are done by hand once:
 
-1. **Neon:** create a project (the free plan works) in a region near your Fly region. Copy two connection strings: the pooled one (host contains `-pooler`) for the app, and the direct one for migrations.
-2. **Fly.io:** run `fly auth login`, then create an organization-scoped token with `fly tokens create org`. An org token lets the first deploy create the app itself.
+1. **Neon:** create a project (the free plan works) in a region near your Fly region. Copy two connection strings from its default (production) branch: the pooled one (host contains `-pooler`) for the app, and the direct one for migrations. Also copy the project ID (Settings) and create an API key (Account settings > API keys) so the pipeline can branch the database.
+2. **Fly.io:** run `fly auth login`, then create an organization-scoped token with `fly tokens create org`. An org token lets the pipeline create and destroy apps.
 3. **GitHub:** add these repository secrets (for example with `gh secret set NAME`, pasting the value when prompted), and never commit them.
 
    | Secret                 | Value                                                                                        |
    | ---------------------- | -------------------------------------------------------------------------------------------- |
    | `FLY_API_TOKEN`        | the org token from step 2                                                                    |
-   | `APP_PASSWORD`         | the shared login password                                                                    |
-   | `DATABASE_URL`         | Neon pooled connection string                                                                |
+   | `APP_PASSWORD`         | the shared login password (staging uses it too)                                              |
+   | `DATABASE_URL`         | Neon pooled connection string (production branch)                                            |
    | `MIGRATE_DATABASE_URL` | Neon direct connection string, used only to migrate (optional; falls back to `DATABASE_URL`) |
+   | `NEON_API_KEY`         | the Neon API key from step 1                                                                 |
 
-   Optionally add a repository variable `FLY_ORG` (defaults to `personal`) and, under Settings > Environments > `production`, require a reviewer so deploys wait for approval.
-4. **`fly.toml`:** change `app` (it must be unique across Fly) and `primary_region` if you like.
-5. Merge to `main`. The first release migrates the database, creates the Fly app, sets the secrets and deploys it at `https://<app>.fly.dev`.
+   And a repository variable `NEON_PROJECT_ID` (`gh variable set NEON_PROJECT_ID`). Optionally add the variable `FLY_ORG` (defaults to `personal`) and, under Settings > Environments > `production`, require a reviewer so releases wait for approval.
+4. **`fly.toml`:** change `app` (it must be unique across Fly) and `primary_region` if you like. Staging uses `<app>-staging`.
+5. Merge to `main`. CD creates the staging app and Neon branch and deploys it. Run **Release** from the Actions tab to create the production app, migrate and deploy it at `https://<app>.fly.dev`.
 
 ### Operating it
 
-- Roll back with `fly releases` and `fly deploy --image <previous image>`, or revert the commit. Migrations only go forward, so a rollback does not undo schema changes.
-- Rotate the login password by updating the `APP_PASSWORD` secret and merging or re-running the workflow; this signs everyone out.
+- Roll back with `fly releases` and `fly deploy --image <previous image>`, or revert the commit and release again. Migrations only go forward, so a rollback does not undo schema changes.
+- Rotate the login password by updating the `APP_PASSWORD` secret, then merge or re-run the workflows; this signs everyone out.
+- Staging holds a copy of production data, including players and games. Do not share its URL more widely than production's.
+- Neon's database and role names are the action's defaults (`neondb`, `neondb_owner`); if yours differ, set `database` and `role` on the branch step in `cd.yml`.
 - `docker build .` builds the same image locally, and `docker run -p 3000:3000 -e APP_PASSWORD=... -e DATABASE_URL=... <image>` runs it.
-- Not set up yet: infrastructure as code, a staging environment, PR preview deploys, and login rate limiting.
+- Not set up yet: infrastructure as code, PR preview deploys, and login rate limiting.
 
 ## Documentation
 

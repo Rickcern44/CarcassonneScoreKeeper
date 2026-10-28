@@ -1,0 +1,85 @@
+name: Deploy to Fly.io
+description: >
+  Creates the Fly app if needed, sets its secrets, deploys the Dockerfile and
+  smoke tests the login page. Run actions/checkout first.
+
+inputs:
+  app:
+    description: Fly app name
+    required: true
+  org:
+    description: Fly organization to create the app in
+    default: personal
+  token:
+    description: Fly API token
+    required: true
+  app-password:
+    description: Shared login password for the app (APP_PASSWORD)
+    required: true
+  database-url:
+    description: Runtime Postgres connection string for the app (DATABASE_URL)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: superfly/flyctl-actions/setup-flyctl@master
+
+    - name: Create the Fly app if it does not exist
+      shell: bash
+      env:
+        FLY_API_TOKEN: ${{ inputs.token }}
+        APP: ${{ inputs.app }}
+        FLY_ORG: ${{ inputs.org }}
+      run: |
+        if ! flyctl status --app "$APP" > /dev/null 2>&1; then
+          flyctl apps create "$APP" --org "$FLY_ORG"
+        fi
+
+    - name: Set secrets
+      shell: bash
+      env:
+        FLY_API_TOKEN: ${{ inputs.token }}
+        APP: ${{ inputs.app }}
+        APP_PASSWORD: ${{ inputs.app-password }}
+        DATABASE_URL: ${{ inputs.database-url }}
+      run: |
+        : "${APP_PASSWORD:?Set the APP_PASSWORD repository secret}"
+        : "${DATABASE_URL:?Missing the database connection string}"
+        {
+          echo "APP_PASSWORD=$APP_PASSWORD"
+          echo "DATABASE_URL=$DATABASE_URL"
+        } | flyctl secrets import --stage --app "$APP"
+
+    # One machine per app: this is a single-user scorekeeper, not a cluster.
+    - name: Deploy
+      shell: bash
+      env:
+        FLY_API_TOKEN: ${{ inputs.token }}
+        APP: ${{ inputs.app }}
+      run: flyctl deploy --remote-only --ha=false --app "$APP"
+
+    - name: Smoke test
+      shell: bash
+      env:
+        APP: ${{ inputs.app }}
+      run: |
+        url="https://$APP.fly.dev/"
+        for attempt in $(seq 1 10); do
+          if curl -fsS "$url" | grep -q "Table password"; then
+            echo "OK: $url is serving the login page."
+            exit 0
+          fi
+          echo "Attempt $attempt failed; retrying in 6s..."
+          sleep 6
+        done
+        echo "The app did not respond with the login page at $url" >&2
+        exit 1
+
+    - name: Show recent logs on failure
+      if: failure()
+      shell: bash
+      env:
+        FLY_API_TOKEN: ${{ inputs.token }}
+        APP: ${{ inputs.app }}
+      run: flyctl logs --app "$APP" --no-tail | tail -n 60
