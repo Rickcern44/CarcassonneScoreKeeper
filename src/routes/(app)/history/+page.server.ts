@@ -1,4 +1,4 @@
-import { gameService } from "$lib/services/gameService";
+import { gameService } from "#lib/services/gameService.js";
 import type { PageServerLoad } from "./$types";
 
 export const load = (async () => {

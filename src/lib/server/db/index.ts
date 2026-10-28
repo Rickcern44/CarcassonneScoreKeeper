@@ -1,6 +1,6 @@
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { env } from "$env/dynamic/private";
+import { DATABASE_URL } from "$app/env/private";
 import * as schema from "./schema";
 
 export type Database = PostgresJsDatabase<typeof schema>;
@@ -14,7 +14,7 @@ let db: Database | undefined;
 export function getDb(): Database {
 	if (db) return db;
 
-	const url = env.DATABASE_URL;
+	const url = DATABASE_URL;
 	if (!url) throw new Error("DATABASE_URL is not set.");
 
 	// `prepare: false` keeps this working through Neon's pooled (PgBouncer) endpoint.

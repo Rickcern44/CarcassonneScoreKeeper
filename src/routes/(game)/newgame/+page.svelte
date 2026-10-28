@@ -1,8 +1,8 @@
 <script lang="ts">
 import { CheckIcon } from "svelte-feather-icons";
+import { type MeepleColor, nextFreeColor } from "#lib/meeple.js";
+import { MAX_PLAYERS, MIN_PLAYERS } from "#lib/services/gameRules.js";
 import { enhance } from "$app/forms";
-import { type MeepleColor, nextFreeColor } from "$lib/meeple";
-import { MAX_PLAYERS, MIN_PLAYERS } from "$lib/services/gameRules";
 import Button from "../../../components/Button.svelte";
 import MeepleDot from "../../../components/MeepleDot.svelte";
 import PageHeader from "../../../components/PageHeader.svelte";
@@ -74,7 +74,7 @@ function changeColor(id: string) {
 						: "border-2 border-dashed border-line bg-surface/60"}"
 				>
 					<label
-						class="flex min-h-[64px] min-w-0 flex-1 cursor-pointer items-center gap-4 rounded-3xl py-3 pl-4 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50"
+						class="flex min-h-[64px] min-w-0 flex-1 cursor-pointer items-center gap-4 rounded-3xl py-3 pl-4 has-disabled:cursor-not-allowed has-disabled:opacity-50"
 					>
 						<input
 							type="checkbox"

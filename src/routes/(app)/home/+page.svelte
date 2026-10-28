@@ -1,7 +1,7 @@
 <script lang="ts">
 import { PlusIcon } from "svelte-feather-icons";
-import { formatGameDate, joinNames } from "$lib/format";
-import { meepleBg, meepleText } from "$lib/meeple";
+import { formatGameDate, joinNames } from "#lib/format.js";
+import { meepleBg, meepleText } from "#lib/meeple.js";
 import Button from "../../../components/Button.svelte";
 import Meeple from "../../../components/Meeple.svelte";
 import MeepleDot from "../../../components/MeepleDot.svelte";

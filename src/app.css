@@ -1,10 +1,66 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@import "@skeletonlabs/skeleton";
+@import "@skeletonlabs/skeleton/themes/hamlindigo";
+
+/* The theme scales all text sizes by 1.067; keep the sizes the app was designed with. */
+:root[data-theme] {
+	--text-scaling: 1;
+}
+
+@plugin "@tailwindcss/forms";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+	--color-bg: var(--bg);
+	--color-surface: var(--surface);
+	--color-ink: var(--ink);
+	--color-muted: var(--muted);
+	--color-line: var(--line);
+	--color-chip: var(--chip);
+	--color-on-chip: var(--on-chip);
+	--color-key: var(--key);
+	--color-on-key: var(--on-key);
+	--color-on-yellow: var(--on-yellow);
+	--color-shadow-ink: var(--shadow-ink);
+
+	--color-tile-field: var(--tile-field);
+	--color-tile-road: var(--tile-road);
+	--color-tile-city: var(--tile-city);
+
+	--color-meeple-red: var(--meeple-red);
+	--color-meeple-blue: var(--meeple-blue);
+	--color-meeple-green: var(--meeple-green);
+	--color-meeple-yellow: var(--meeple-yellow);
+	--color-meeple-black: var(--meeple-black);
+	--color-meeple-gray: var(--meeple-gray);
+
+	--font-display: "Fredoka", "Nunito", system-ui, sans-serif;
+	--font-body: "Nunito", system-ui, sans-serif;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentcolor);
+	}
+}
 
 /*
  * Design tokens. Components read these variables (via the Tailwind colors in
- * tailwind.config.js), so a theme only has to override the values below.
+ * the @theme block above), so a theme only has to override the values below.
  * Dark applies when the device prefers it, unless the user picked light, or
  * when the user picked dark (`data-mode` on <html>, see src/lib/theme.ts).
  */

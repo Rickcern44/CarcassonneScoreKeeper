@@ -1,5 +1,5 @@
 <script lang="ts">
-import { type MeepleColor, meepleBg, meepleText } from "$lib/meeple";
+import { type MeepleColor, meepleBg, meepleText } from "#lib/meeple.js";
 
 export let name: string;
 export let score: number;

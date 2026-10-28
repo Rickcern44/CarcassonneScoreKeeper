@@ -2,8 +2,8 @@
 import { onDestroy } from "svelte";
 import { flip } from "svelte/animate";
 import { RotateCcwIcon } from "svelte-feather-icons";
+import { meepleBg, meepleText } from "#lib/meeple.js";
 import { enhance } from "$app/forms";
-import { meepleBg, meepleText } from "$lib/meeple";
 import Button from "../../../../components/Button.svelte";
 import GameResults from "../../../../components/GameResults.svelte";
 import KeypadSheet from "../../../../components/KeypadSheet.svelte";

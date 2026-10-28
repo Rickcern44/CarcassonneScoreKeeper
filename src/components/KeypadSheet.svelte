@@ -88,7 +88,7 @@ const keyClass =
 		aria-modal="true"
 		aria-label="Enter points for {name}"
 		tabindex="-1"
-		class="relative w-full max-w-md rounded-t-[32px] bg-surface px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5 text-ink outline-none"
+		class="relative w-full max-w-md rounded-t-[32px] bg-surface px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5 text-ink outline-hidden"
 		on:keydown={onKeydown}
 	>
 		<div class="flex items-baseline justify-between">

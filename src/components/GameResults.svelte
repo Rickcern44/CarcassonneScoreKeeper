@@ -1,8 +1,8 @@
 <script lang="ts">
+import { joinNames } from "#lib/format.js";
+import { meepleBg, meepleText } from "#lib/meeple.js";
+import type { GameDetail } from "#lib/services/gameService.js";
 import { enhance } from "$app/forms";
-import { joinNames } from "$lib/format";
-import { meepleBg, meepleText } from "$lib/meeple";
-import type { GameDetail } from "$lib/services/gameService";
 import Button from "./Button.svelte";
 import Crown from "./Crown.svelte";
 import RankRow from "./RankRow.svelte";

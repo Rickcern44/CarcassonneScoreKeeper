@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import * as schema from "$lib/server/db/schema";
+import * as schema from "#lib/server/db/schema.js";
 import { createDrizzleGameRepository, createGameService } from "./gameService";
 import {
 	createDrizzlePlayerRepository,

@@ -1,5 +1,5 @@
 import { error } from "@sveltejs/kit";
-import { playerService } from "$lib/services/playerService";
+import { playerService } from "#lib/services/playerService.js";
 import type { PageServerLoad } from "./$types";
 
 export const load = (async ({ params }) => {

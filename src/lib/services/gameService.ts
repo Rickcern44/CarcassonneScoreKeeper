@@ -1,12 +1,12 @@
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
-import { MEEPLE_COLORS, type MeepleColor } from "$lib/meeple";
-import { getDb } from "$lib/server/db";
+import { MEEPLE_COLORS, type MeepleColor } from "#lib/meeple.js";
+import { getDb } from "#lib/server/db/index.js";
 import {
 	gamePlayers,
 	games,
 	players,
 	scoreEvents,
-} from "$lib/server/db/schema";
+} from "#lib/server/db/schema.js";
 import { MAX_PLAYERS, MIN_PLAYERS } from "./gameRules";
 
 export { MAX_PLAYERS, MEEPLE_COLORS, type MeepleColor, MIN_PLAYERS };

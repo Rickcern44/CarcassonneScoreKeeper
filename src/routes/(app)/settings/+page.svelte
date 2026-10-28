@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onMount } from "svelte";
-import { getThemeMode, setThemeMode, type ThemeMode } from "$lib/theme";
+import { getThemeMode, setThemeMode, type ThemeMode } from "#lib/theme.js";
 import Button from "../../../components/Button.svelte";
 import PageTitle from "../../../components/PageTitle.svelte";
 
