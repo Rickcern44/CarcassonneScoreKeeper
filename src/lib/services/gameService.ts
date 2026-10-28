@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { MEEPLE_COLORS, type MeepleColor } from "$lib/meeple";
 import { getDb } from "$lib/server/db";
 import {
 	gamePlayers,
@@ -6,19 +7,9 @@ import {
 	players,
 	scoreEvents,
 } from "$lib/server/db/schema";
+import { MAX_PLAYERS, MIN_PLAYERS } from "./gameRules";
 
-export const MEEPLE_COLORS = [
-	"red",
-	"blue",
-	"green",
-	"yellow",
-	"black",
-	"gray",
-] as const;
-export type MeepleColor = (typeof MEEPLE_COLORS)[number];
-
-export const MIN_PLAYERS = 2;
-export const MAX_PLAYERS = 6;
+export { MAX_PLAYERS, MEEPLE_COLORS, type MeepleColor, MIN_PLAYERS };
 
 export interface Game {
 	id: string;
@@ -41,6 +32,8 @@ export interface GamePlayer extends GameEntry {
 export interface GameRecord {
 	game: Game;
 	players: GamePlayer[];
+	/** Number of score events, so the UI knows whether Undo has anything to do. */
+	eventCount: number;
 }
 
 export interface RankedPlayer extends GamePlayer {
@@ -55,6 +48,12 @@ export interface RankedPlayer extends GamePlayer {
 export interface GameDetail {
 	game: Game;
 	players: RankedPlayer[];
+	eventCount: number;
+}
+
+export interface PlayerStats {
+	gamesPlayed: number;
+	wins: number;
 }
 
 export interface ScoreEvent {
@@ -91,6 +90,8 @@ export interface GameRepository {
 	deleteLatestScoreEvent(gameId: string): Promise<ScoreEvent | undefined>;
 	/** Returns false unless the game exists and was active. */
 	finish(id: string): Promise<boolean>;
+	/** Deletes an active game and its scores. Returns false unless it was active. */
+	discard(id: string): Promise<boolean>;
 }
 
 /** Orders by score (highest first), then name, and assigns tied ranks. */
@@ -104,12 +105,35 @@ export function rankPlayers(gamePlayersList: GamePlayer[]): RankedPlayer[] {
 	}));
 }
 
-function toDetail({ game, players: gamePlayersList }: GameRecord): GameDetail {
-	return { game, players: rankPlayers(gamePlayersList) };
+function toDetail({
+	game,
+	players: gamePlayersList,
+	eventCount,
+}: GameRecord): GameDetail {
+	return { game, players: rankPlayers(gamePlayersList), eventCount };
+}
+
+/** The players ranked first; more than one means the game was tied. */
+export function winnersOf(detail: GameDetail): RankedPlayer[] {
+	return detail.players.filter((player) => player.rank === 1);
+}
+
+/** Games played and wins per player id, from finished games. Ties count as wins. */
+export function playerStats(finished: GameDetail[]): Map<string, PlayerStats> {
+	const stats = new Map<string, PlayerStats>();
+	for (const detail of finished) {
+		for (const player of detail.players) {
+			const entry = stats.get(player.playerId) ?? { gamesPlayed: 0, wins: 0 };
+			entry.gamesPlayed += 1;
+			if (player.rank === 1) entry.wins += 1;
+			stats.set(player.playerId, entry);
+		}
+	}
+	return stats;
 }
 
 export function createGameService(repository: GameRepository) {
-	return {
+	const service = {
 		async create(entries: GameEntry[]): Promise<CreateGameResult> {
 			if (entries.length < MIN_PLAYERS || entries.length > MAX_PLAYERS) {
 				return {
@@ -193,7 +217,25 @@ export function createGameService(repository: GameRepository) {
 			const finished = await repository.finish(gameId);
 			return finished ? {} : { error: "This game is already finished." };
 		},
+
+		/** Removes an active game entirely, e.g. one started by mistake. */
+		async discard(gameId: string): Promise<GameActionResult> {
+			const record = await repository.get(gameId);
+			if (!record) return { error: "Game not found." };
+			const discarded = await repository.discard(gameId);
+			return discarded ? {} : { error: "Finished games can't be discarded." };
+		},
+
+		/** Starts a new game with the same players and colors. */
+		async rematch(gameId: string): Promise<CreateGameResult> {
+			const record = await repository.get(gameId);
+			if (!record) return { error: "Game not found." };
+			return service.create(
+				record.players.map(({ playerId, color }) => ({ playerId, color })),
+			);
+		},
 	};
+	return service;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -234,11 +276,21 @@ export function createDrizzleGameRepository(
 			.where(inArray(gamePlayers.gameId, gameIds))
 			.groupBy(gamePlayers.gameId, gamePlayers.playerId, players.name);
 
+		const eventRows = await getDatabase()
+			.select({
+				gameId: scoreEvents.gameId,
+				count: sql<number>`count(*)::int`,
+			})
+			.from(scoreEvents)
+			.where(inArray(scoreEvents.gameId, gameIds))
+			.groupBy(scoreEvents.gameId);
+
 		return rows.map((row) => ({
 			game: toGame(row),
 			players: playerRows
 				.filter((player) => player.gameId === row.id)
 				.map(({ gameId: _gameId, ...player }) => player),
+			eventCount: eventRows.find((e) => e.gameId === row.id)?.count ?? 0,
 		}));
 	}
 
@@ -332,6 +384,15 @@ export function createDrizzleGameRepository(
 			const rows = await getDatabase()
 				.update(games)
 				.set({ status: "finished", finishedAt: new Date() })
+				.where(and(eq(games.id, id), eq(games.status, "active")))
+				.returning({ id: games.id });
+			return rows.length > 0;
+		},
+		async discard(id) {
+			if (!UUID.test(id)) return false;
+			// game_players and score_events rows go with it (ON DELETE CASCADE).
+			const rows = await getDatabase()
+				.delete(games)
 				.where(and(eq(games.id, id), eq(games.status, "active")))
 				.returning({ id: games.id });
 			return rows.length > 0;

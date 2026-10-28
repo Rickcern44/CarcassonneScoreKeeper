@@ -1,6 +1,6 @@
-import { playerService } from "$lib/services/playerService";
+import { gameService } from "$lib/services/gameService";
 import type { PageServerLoad } from "./$types";
 
 export const load = (async () => {
-	return { players: await playerService.list() };
+	return { games: await gameService.listFinished() };
 }) satisfies PageServerLoad;

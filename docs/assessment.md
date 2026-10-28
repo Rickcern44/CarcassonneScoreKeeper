@@ -2,6 +2,8 @@
 
 This is a source review snapshot, not a verified runtime or security audit. Suggestions are not approved requirements. Recheck the code and environment before acting.
 
+> **Update (mobile redesign, issues #20 to #30):** the first playable slice described below is now implemented: manual game scorekeeping with a mobile-first UI, history, player stats and a dark theme. The "What exists", "Suggested priorities" and "Validation status" sections below describe the earlier state and are kept as history; see the README for the current state and checks. Decisions taken along the way are listed under "Decisions recorded".
+
 ## Direction agreed so far
 
 - Keep costs free or very low while evaluating whether the app is worth continuing. Favor a simple architecture that is easy to abandon or move.
@@ -10,6 +12,16 @@ This is a source review snapshot, not a verified runtime or security audit. Sugg
 - An optional Aspire TypeScript AppHost (`aspire-apphost/`, issue #16) runs the SvelteKit app and receives `APP_PASSWORD` as a secret parameter. It also runs a local Postgres container and a `db-migrate` step.
 - Shared access to all players and games is acceptable for now. A shared-password login is implemented: `APP_PASSWORD` is a private env var, and sessions are signed cookies keyed on that password, so changing it and restarting rotates the password and signs everyone out. HTTPS and login rate limiting are still needed before deployment. Individual accounts and private data are not required at this stage.
 - A suggested first playable slice is creating a game, adding players, adjusting scores, and finishing or revisiting a game. Automatic scoring and statistics can wait; the precise first-release scope remains to be confirmed.
+
+## Decisions recorded
+
+- **Removing a player archives them** (`players.archived_at`), so game history stays intact. Re-adding the same name restores the same player.
+- **Players per game: 2 to 6**, one meeple color each, no color used twice.
+- **One active game at a time**, enforced by the service and a partial unique index.
+- **Ties are derived, not stored.** Players are ranked with competition ranking (1, 1, 3). Everyone ranked 1 is a winner and the results screen shows a tie as "Tie for the win" with all tied names. Ties count as a win for each tied player in stats.
+- **Scores are the sum of signed score events; Undo deletes the latest event.** Manual entry only: no Carcassonne scoring rules are built in.
+- **A game can be discarded** while active (deletes its scores). Finished games cannot be edited or discarded.
+- **Theme:** follows the device by default, with a System / Light / Dark override remembered on the device (`localStorage`).
 
 ## What exists
 

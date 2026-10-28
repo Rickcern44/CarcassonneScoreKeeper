@@ -25,7 +25,7 @@ const isActive = (href: string, path: string) =>
 					href={tab.href}
 					aria-current={active ? "page" : undefined}
 					class="flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-2xl py-2 text-sm font-bold {active
-						? "bg-meeple-yellow text-ink"
+						? "bg-meeple-yellow text-on-yellow"
 						: "text-muted"}"
 				>
 					<svelte:component this={tab.icon} size="24" />

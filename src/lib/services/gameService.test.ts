@@ -9,8 +9,10 @@ import {
 	type GameRepository,
 	MAX_PLAYERS,
 	type MeepleColor,
+	playerStats,
 	rankPlayers,
 	type ScoreEvent,
+	winnersOf,
 } from "./gameService";
 
 const COLORS: MeepleColor[] = [
@@ -34,6 +36,7 @@ function createMemoryRepository() {
 
 	const record = (game: Game): GameRecord => ({
 		game,
+		eventCount: events.filter((e) => e.gameId === game.id).length,
 		players: (members.get(game.id) ?? []).map(
 			({ playerId, color }): GamePlayer => ({
 				playerId,
@@ -98,6 +101,18 @@ function createMemoryRepository() {
 				playerId: removed.playerId,
 				points: removed.points,
 			};
+		},
+		async discard(id) {
+			const index = games.findIndex(
+				(g) => g.id === id && g.status === "active",
+			);
+			if (index === -1) return false;
+			const [removed] = games.splice(index, 1);
+			members.delete(removed.id);
+			for (let i = events.length - 1; i >= 0; i--) {
+				if (events[i].gameId === removed.id) events.splice(i, 1);
+			}
+			return true;
 		},
 		async finish(id) {
 			const game = games.find((g) => g.id === id);
@@ -340,5 +355,90 @@ describe("rankPlayers", () => {
 			["Cleo", 3],
 			["Dev", 4],
 		]);
+	});
+});
+
+describe("event count", () => {
+	it("tracks events so the UI can disable undo", async () => {
+		const { service, gameId, ids } = await startGame();
+		expect((await service.get(gameId))?.eventCount).toBe(0);
+		await service.addScore(gameId, ids[0], 4);
+		await service.addScore(gameId, ids[1], 2);
+		expect((await service.get(gameId))?.eventCount).toBe(2);
+		await service.undo(gameId);
+		expect((await service.get(gameId))?.eventCount).toBe(1);
+	});
+});
+
+describe("discarding", () => {
+	it("removes an active game and its scores, freeing the slot", async () => {
+		const { service, gameId, ids, entries } = await startGame();
+		await service.addScore(gameId, ids[0], 9);
+
+		expect(await service.discard(gameId)).toEqual({});
+		expect(await service.get(gameId)).toBeUndefined();
+		expect(await service.getActive()).toBeUndefined();
+		expect((await service.create(entries)).game).toBeDefined();
+	});
+
+	it("refuses finished and unknown games", async () => {
+		const { service, gameId } = await startGame();
+		await service.finish(gameId);
+		expect((await service.discard(gameId)).error).toMatch(/can't be discarded/);
+		expect((await service.discard("missing")).error).toMatch(/not found/);
+		expect(await service.get(gameId)).toBeDefined();
+	});
+});
+
+describe("rematch", () => {
+	it("creates a fresh game with the same players and colors", async () => {
+		const { service, gameId, ids } = await startGame();
+		await service.addScore(gameId, ids[0], 30);
+		await service.finish(gameId);
+
+		const { game } = await service.rematch(gameId);
+		expect(game?.id).not.toBe(gameId);
+		const detail = await service.get(game?.id ?? "");
+		expect(detail?.game.status).toBe("active");
+		expect(
+			detail?.players.map((p) => [p.name, p.color, p.score]).sort(),
+		).toEqual([
+			["Ada", "red", 0],
+			["Ben", "blue", 0],
+			["Cleo", "green", 0],
+		]);
+	});
+
+	it("cannot rematch while a game is active, or an unknown game", async () => {
+		const { service, gameId } = await startGame();
+		expect((await service.rematch(gameId)).error).toMatch(/in progress/);
+		expect((await service.rematch("missing")).error).toMatch(/not found/);
+	});
+});
+
+describe("winners and stats", () => {
+	it("lists every top-ranked player as a winner", async () => {
+		const { service, gameId, ids } = await startGame();
+		await service.addScore(gameId, ids[0], 5);
+		await service.addScore(gameId, ids[1], 5);
+		const detail = await service.get(gameId);
+		expect(
+			winnersOf(detail as NonNullable<typeof detail>).map((p) => p.name),
+		).toEqual(["Ada", "Ben"]);
+	});
+
+	it("counts games played and wins per player, ties included", async () => {
+		const { service, entries, ids, gameId } = await startGame();
+		await service.addScore(gameId, ids[0], 10);
+		await service.finish(gameId);
+		const second = (await service.create(entries)).game?.id ?? "";
+		await service.addScore(second, ids[0], 3);
+		await service.addScore(second, ids[1], 3);
+		await service.finish(second);
+
+		const stats = playerStats(await service.listFinished());
+		expect(stats.get(ids[0])).toEqual({ gamesPlayed: 2, wins: 2 });
+		expect(stats.get(ids[1])).toEqual({ gamesPlayed: 2, wins: 1 });
+		expect(stats.get(ids[2])).toEqual({ gamesPlayed: 2, wins: 0 });
 	});
 });
