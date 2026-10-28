@@ -1,9 +1,21 @@
 import { fail } from "@sveltejs/kit";
+import { gameService, playerStats } from "$lib/services/gameService";
 import { playerService } from "$lib/services/playerService";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load = (async () => {
-	return { players: await playerService.list() };
+	const [players, finished] = await Promise.all([
+		playerService.list(),
+		gameService.listFinished(),
+	]);
+	const stats = playerStats(finished);
+	return {
+		players: players.map((player) => ({
+			...player,
+			gamesPlayed: stats.get(player.id)?.gamesPlayed ?? 0,
+			wins: stats.get(player.id)?.wins ?? 0,
+		})),
+	};
 }) satisfies PageServerLoad;
 
 export const actions = {

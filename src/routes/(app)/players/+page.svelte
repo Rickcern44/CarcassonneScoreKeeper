@@ -50,7 +50,10 @@ const colors = ["red", "blue", "green", "yellow", "gray", "black"] as const;
 					{player.name}
 				</p>
 				<p class="text-sm font-bold text-muted">
-					Added {new Date(player.created_at).toLocaleDateString()}
+					{player.gamesPlayed}
+					{player.gamesPlayed === 1 ? "game" : "games"}
+					· {player.wins}
+					{player.wins === 1 ? "win" : "wins"}
 				</p>
 			</div>
 			<form method="POST" action="?/remove" use:enhance>

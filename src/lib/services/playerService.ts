@@ -66,7 +66,7 @@ export function createDrizzlePlayerRepository(
 				.select()
 				.from(players)
 				.where(isNull(players.archivedAt))
-				.orderBy(asc(players.createdAt));
+				.orderBy(asc(players.createdAt), asc(players.name));
 			return rows.map(toPlayer);
 		},
 		async get(id) {

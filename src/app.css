@@ -4,9 +4,13 @@
 
 /*
  * Design tokens. Components read these variables (via the Tailwind colors in
- * tailwind.config.js), so dark mode only has to override the values below.
+ * tailwind.config.js), so a theme only has to override the values below.
+ * Dark applies when the device prefers it, unless the user picked light, or
+ * when the user picked dark (`data-mode` on <html>, see src/lib/theme.ts).
  */
 :root {
+	color-scheme: light;
+
 	--bg: #f5f0e4;
 	--surface: #ffffff;
 	--ink: #2a2220;
@@ -24,14 +28,48 @@
 	--tile-road: #e8d3a2;
 	--tile-city: #c79a6b;
 
-	--on-meeple: #ffffff;
-	--on-meeple-yellow: #2a2220;
+	/* Colors that stay the same in every theme. */
+	--on-yellow: #2a2220;
+	--chip: #ffffff;
+	--on-chip: #2a2220;
+	--key: #2a2220;
+	--on-key: #ffffff;
+	--shadow-ink: #2a2220;
 }
 
-/*
- * Dark values are supplied by the dark theme issue (#29): override the tokens
- * above under a `.dark` selector.
- */
+:root[data-mode="dark"] {
+	color-scheme: dark;
+
+	--bg: #16130f;
+	--surface: #26211b;
+	--ink: #f4eee2;
+	--muted: #a89f90;
+	--line: #3a332a;
+
+	--tile-field: #3e5a33;
+	--tile-road: #6b5b34;
+	--tile-city: #5a4129;
+
+	--shadow-ink: #0b0906;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-mode="light"]) {
+		color-scheme: dark;
+
+		--bg: #16130f;
+		--surface: #26211b;
+		--ink: #f4eee2;
+		--muted: #a89f90;
+		--line: #3a332a;
+
+		--tile-field: #3e5a33;
+		--tile-road: #6b5b34;
+		--tile-city: #5a4129;
+
+		--shadow-ink: #0b0906;
+	}
+}
 
 html,
 body {

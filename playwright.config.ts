@@ -7,6 +7,8 @@ const config: PlaywrightTestConfig = {
 		env: { APP_PASSWORD: "playwright-test" },
 	},
 	testDir: "tests",
+	// The database-backed journey runs separately: see playwright.e2e.config.ts.
+	testIgnore: "e2e/**",
 	testMatch: /(.+\.)?(test|spec)\.[jt]s/,
 };
 

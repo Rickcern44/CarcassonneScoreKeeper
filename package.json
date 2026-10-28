@@ -10,6 +10,7 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"playwright-test": "playwright test",
+		"test:e2e": "playwright test -c playwright.e2e.config.ts",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "vitest",

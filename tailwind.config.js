@@ -21,6 +21,12 @@ module.exports = {
 				ink: "var(--ink)",
 				muted: "var(--muted)",
 				line: "var(--line)",
+				chip: "var(--chip)",
+				"on-chip": "var(--on-chip)",
+				key: "var(--key)",
+				"on-key": "var(--on-key)",
+				"on-yellow": "var(--on-yellow)",
+				"shadow-ink": "var(--shadow-ink)",
 				tile: {
 					field: "var(--tile-field)",
 					road: "var(--tile-road)",

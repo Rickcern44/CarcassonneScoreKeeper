@@ -1,10 +1,18 @@
 # Carcassonne Score Keeper
 
-A work-in-progress scorekeeping tool for the board game Carcassonne. The intended outcome is to track players and scores during a game; the scoring workflow is not implemented yet.
+A mobile-first scorekeeping tool for the board game Carcassonne. It tracks players and scores during a game by manual entry; no Carcassonne scoring rules are built in.
 
 ## Current state
 
-The app has a shared-password login, a player list and creation form backed by Postgres (via Drizzle ORM), and an early game setup screen. Starting a game, recording scores, and game history are not implemented in the current UI. See [repository assessment and next steps](docs/assessment.md) for evidence, risks, and open product questions.
+- Shared-password login, then a tab bar with **Home**, **Players** and **History**.
+- **Players:** add and remove players (removing archives them so past games keep their results) with games and wins per player.
+- **New game:** pick 2 to 6 players and a meeple color each, then start. Only one game can be active at a time.
+- **Scoreboard:** players ranked by score (cards move to their new rank about 1.5 seconds after the last change, so they do not jump under your finger). Tap a player for quick buttons (-1, +1, +3, +5) or a keypad for any amount, add or subtract. Undo reverses the latest change. Scores are stored in Postgres, so a refresh or another device shows the same game.
+- **Finish and results:** finishing asks for confirmation, locks the game, and shows the winner (ties show everyone tied), standings, and a rematch button. Results can be reopened by URL (`/game/<id>`). An active game can also be discarded.
+- **Home and History:** the game in progress, recent games, and every finished game.
+- **Theme:** light and dark, following the device with a System / Light / Dark override in Settings.
+
+See [repository assessment and next steps](docs/assessment.md) for the decisions taken, risks, and open product questions.
 
 ## Local development
 
@@ -41,14 +49,14 @@ On first run the dashboard prompts for the `app-password` parameter. To supply i
 
 ## Database
 
-Data is stored in Postgres through [Drizzle ORM](https://orm.drizzle.team) with the `postgres` driver. Locally, Aspire runs Postgres in a container; production is planned to use a single Neon instance. The only table so far is `players`. Games and scores are not modeled yet.
+Data is stored in Postgres through [Drizzle ORM](https://orm.drizzle.team) with the `postgres` driver. Locally, Aspire runs Postgres in a container; production is planned to use a single Neon instance. Tables: `players`, `games`, `game_players` (a game's players and their meeple colors) and `score_events` (signed points; a player's score is the sum of their events, and Undo deletes the latest one).
 
 - Schema: `src/lib/server/db/schema.ts`; client: `src/lib/server/db/index.ts` (reads the private `DATABASE_URL`).
 - `npm run db:generate` creates a migration in `drizzle/` after a schema change; commit the result.
 - `npm run db:migrate` applies migrations to `DATABASE_URL`. Aspire runs it automatically for the local database. For production, run it in CD, not at app startup.
 - With Neon, use the direct (non-pooled) connection string for `db:migrate`. The pooled string is fine for the running app.
 
-Unit tests use an in-memory repository and need no database. The Drizzle repository has not been covered by automated tests; Aspire/Docker integration tests are a separate piece of work.
+Unit tests use in-memory repositories and need no database. `src/lib/services/gameService.integration.test.ts` runs the real Drizzle repositories and is skipped unless `TEST_DATABASE_URL` is set (see below).
 
 ## Checks
 
@@ -60,7 +68,27 @@ npm run playwright-test   # Playwright; builds and starts a preview server
 npm run build
 ```
 
-Playwright also requires its browser dependencies. The Playwright tests cover only the login screen and the unauthenticated redirect, not the product flows. See the assessment for the recorded upgrade baseline and known remaining check failures.
+Playwright also requires its browser dependencies (`npx playwright install`). `npm run playwright-test` covers the login screen and the unauthenticated redirect and needs no database.
+
+### Tests that need Postgres
+
+Two kinds of test run against a real database. Both need a **throwaway, freshly migrated** database, so do not point them at data you care about.
+
+```sh
+# 1. Create an empty database and apply the migrations to it.
+DATABASE_URL=postgresql://user:password@localhost:5432/carcassonne_test npm run db:migrate
+
+# 2. Service tests against the real Drizzle repositories. WARNING: this deletes
+#    every row in the players and games tables of that database.
+TEST_DATABASE_URL=postgresql://user:password@localhost:5432/carcassonne_test npm run test:unit -- --run
+
+# 3. The end-to-end journey: log in, add players, start a game, score with
+#    quick buttons and the keypad, undo, finish, and see it in History.
+#    It builds the app, starts a preview server and needs the database to be fresh.
+E2E_DATABASE_URL=postgresql://user:password@localhost:5432/carcassonne_test npm run test:e2e
+```
+
+With Aspire, start the app host (`aspire start`), copy the Postgres connection string from the dashboard, create a separate empty database in that container (for example `create database carcassonne_test`), and use that name in the URLs above. Without Aspire, any Postgres works, for example `docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=password postgres:17`. The journey leaves its data behind, so reset the database before running it again.
 
 ## Documentation
 
