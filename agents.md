@@ -6,6 +6,8 @@ This repository is a work-in-progress Carcassonne scorekeeping application. Read
 
 ## Working agreement
 
+- Work is tracked in GitHub issues (`gh issue list`, `gh issue view <n> --comments`). When the user refers to a task by name or number (for example "the app shell"), find the matching issue and treat its scope, out-of-scope, and done-when sections as the brief. Reference the issue in branch names, commits, and PRs.
+- `main` is the default branch. Start new work from an up-to-date `main` (`git fetch`, then branch from `origin/main`) and open PRs against `main`. Do not base work on `development` or on other feature branches unless asked.
 - Follow the user's requested scope. Do not implement proposed roadmap items unless asked.
 - Inspect relevant routes, services, tests, and existing changes before editing. Preserve unrelated user work.
 - Make focused changes consistent with the existing SvelteKit and TypeScript patterns. Avoid unrelated dependency upgrades or refactors.
