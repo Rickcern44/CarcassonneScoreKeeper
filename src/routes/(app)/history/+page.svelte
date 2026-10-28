@@ -1,5 +1,5 @@
 <script lang="ts">
-import { formatGameDate, joinNames } from "$lib/format";
+import { formatGameDate, joinNames } from "#lib/format.js";
 import Crown from "../../../components/Crown.svelte";
 import PageTitle from "../../../components/PageTitle.svelte";
 import ScorePill from "../../../components/ScorePill.svelte";

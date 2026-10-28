@@ -1,11 +1,11 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { env } from "$env/dynamic/private";
 import {
 	createSessionToken,
 	passwordMatches,
 	SESSION_COOKIE,
 	SESSION_MAX_AGE_SECONDS,
-} from "$lib/services/sessionService";
+} from "#lib/services/sessionService.js";
+import { APP_PASSWORD } from "$app/env/private";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load = (async ({ locals: { authenticated } }) => {
@@ -17,7 +17,7 @@ export const load = (async ({ locals: { authenticated } }) => {
 
 export const actions = {
 	login: async ({ request, cookies }) => {
-		const appPassword = env.APP_PASSWORD;
+		const appPassword = APP_PASSWORD;
 		if (!appPassword) {
 			return fail(500, {
 				error: "Login is not configured. Set APP_PASSWORD on the server.",

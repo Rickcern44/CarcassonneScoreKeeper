@@ -1,6 +1,6 @@
 import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
-import { getDb } from "$lib/server/db";
-import { players } from "$lib/server/db/schema";
+import { getDb } from "#lib/server/db/index.js";
+import { players } from "#lib/server/db/schema.js";
 
 export interface Player {
 	id: string;

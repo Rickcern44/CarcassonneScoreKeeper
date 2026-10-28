@@ -1,6 +1,6 @@
 <script lang="ts">
 import { ClockIcon, HomeIcon, UsersIcon } from "svelte-feather-icons";
-import { page } from "$app/stores";
+import { page } from "$app/state";
 
 const tabs = [
 	{ href: "/home", label: "Home", icon: HomeIcon },
@@ -8,7 +8,7 @@ const tabs = [
 	{ href: "/history", label: "History", icon: ClockIcon },
 ];
 
-$: pathname = $page.url.pathname;
+const pathname = $derived(page.url.pathname);
 const isActive = (href: string, path: string) =>
 	path === href || path.startsWith(`${href}/`);
 </script>

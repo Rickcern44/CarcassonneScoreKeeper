@@ -1,5 +1,5 @@
 <script lang="ts">
-import { type MeepleColor, meepleBg, meepleText } from "$lib/meeple";
+import { type MeepleColor, meepleBg, meepleText } from "#lib/meeple.js";
 import Meeple from "./Meeple.svelte";
 
 export let color: MeepleColor = "red";

@@ -1,5 +1,5 @@
 import { error, fail, redirect } from "@sveltejs/kit";
-import { gameService } from "$lib/services/gameService";
+import { gameService } from "#lib/services/gameService.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load = (async ({ params }) => {

@@ -1,6 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { gameService, MEEPLE_COLORS } from "$lib/services/gameService";
-import { playerService } from "$lib/services/playerService";
+import { gameService, MEEPLE_COLORS } from "#lib/services/gameService.js";
+import { playerService } from "#lib/services/playerService.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load = (async () => {
