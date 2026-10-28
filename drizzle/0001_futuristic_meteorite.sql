@@ -1,0 +1,1 @@
+ALTER TABLE "players" ADD COLUMN "archived_at" timestamp with time zone;

@@ -18,4 +18,13 @@ export const actions = {
 
 		return { player: result.player };
 	},
+	remove: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get("id");
+
+		const result = await playerService.remove(typeof id === "string" ? id : "");
+		if (result.error) return fail(400, { error: result.error });
+
+		return { removed: true };
+	},
 } satisfies Actions;
