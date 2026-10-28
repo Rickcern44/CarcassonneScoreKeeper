@@ -76,6 +76,12 @@ test("core journey: players, game, scoring, undo, finish, history", async ({
 	// Keypad subtract, then re-rank: Ben passes Ada.
 	await page.getByRole("button", { name: /^Ben, rank/ }).click();
 	await page.getByRole("button", { name: "Add 5 points to Ben" }).click();
+	// The score changes at once, but the card keeps its place for a moment so
+	// the list doesn't jump under the next tap...
+	await expect(
+		page.getByRole("button", { name: "Ben, rank 2, 8 points" }),
+	).toBeVisible();
+	// ...then it moves to its new rank.
 	await expect(
 		page.getByRole("button", { name: "Ben, rank 1, 8 points" }),
 	).toBeVisible();

@@ -1,4 +1,5 @@
 <script lang="ts">
+import { onDestroy } from "svelte";
 import { flip } from "svelte/animate";
 import { RotateCcwIcon } from "svelte-feather-icons";
 import { enhance } from "$app/forms";
@@ -14,11 +15,48 @@ export let form: ActionData;
 
 const QUICK_POINTS = [-1, 1, 3, 5];
 
+// Scores update straight away, but cards only move to their new rank once
+// scoring has paused for this long, so they don't jump out from under a tap.
+const REORDER_DELAY_MS = 1500;
+
 let selectedId: string | null = null;
 let keypadFor: string | null = null;
 let confirmingFinish = false;
 
+let shownGameId = "";
+let order: string[] = [];
+let ranks: Record<string, number> = {};
+let reorderTimer: ReturnType<typeof setTimeout> | undefined;
+
+function applyOrder(current: PageData["detail"]) {
+	shownGameId = current.game.id;
+	order = current.players.map((player) => player.playerId);
+	ranks = Object.fromEntries(
+		current.players.map((player) => [player.playerId, player.rank]),
+	);
+}
+
+function scheduleReorder(current: PageData["detail"]) {
+	clearTimeout(reorderTimer);
+	const sameCards =
+		current.game.id === shownGameId &&
+		order.length === current.players.length &&
+		current.players.every((player) => order.includes(player.playerId));
+	if (sameCards) {
+		reorderTimer = setTimeout(() => applyOrder(current), REORDER_DELAY_MS);
+	} else {
+		applyOrder(current);
+	}
+}
+
+onDestroy(() => clearTimeout(reorderTimer));
+
 $: detail = data.detail;
+$: scheduleReorder(detail);
+$: shown = order.flatMap((id) => {
+	const player = detail.players.find((p) => p.playerId === id);
+	return player ? [{ ...player, rank: ranks[id] ?? player.rank }] : [];
+});
 $: active = detail.game.status === "active";
 $: keypadPlayer = detail.players.find((p) => p.playerId === keypadFor);
 
@@ -57,7 +95,7 @@ const pointsText = (points: number) =>
 	{/if}
 
 	<ol class="mt-4 flex flex-col gap-3">
-		{#each detail.players as player (player.playerId)}
+		{#each shown as player (player.playerId)}
 			{@const open = selectedId === player.playerId}
 			<li
 				animate:flip={{ duration: 250 }}

@@ -7,7 +7,7 @@ A mobile-first scorekeeping tool for the board game Carcassonne. It tracks playe
 - Shared-password login, then a tab bar with **Home**, **Players** and **History**.
 - **Players:** add and remove players (removing archives them so past games keep their results) with games and wins per player.
 - **New game:** pick 2 to 6 players and a meeple color each, then start. Only one game can be active at a time.
-- **Scoreboard:** players ranked live by score. Tap a player for quick buttons (-1, +1, +3, +5) or a keypad for any amount, add or subtract. Undo reverses the latest change. Scores are stored in Postgres, so a refresh or another device shows the same game.
+- **Scoreboard:** players ranked by score (cards move to their new rank about 1.5 seconds after the last change, so they do not jump under your finger). Tap a player for quick buttons (-1, +1, +3, +5) or a keypad for any amount, add or subtract. Undo reverses the latest change. Scores are stored in Postgres, so a refresh or another device shows the same game.
 - **Finish and results:** finishing asks for confirmation, locks the game, and shows the winner (ties show everyone tied), standings, and a rematch button. Results can be reopened by URL (`/game/<id>`). An active game can also be discarded.
 - **Home and History:** the game in progress, recent games, and every finished game.
 - **Theme:** light and dark, following the device with a System / Light / Dark override in Settings.
