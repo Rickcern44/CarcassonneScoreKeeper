@@ -26,3 +26,12 @@ This repository is a work-in-progress Carcassonne scorekeeping application. Read
 - `aspire-apphost/apphost.mts`: optional Aspire AppHost that runs the app; `aspire-apphost/.aspire/` is generated, never edit it. `.claude/skills/` holds vendored Aspire skills.
 - `.github/workflows/ci.yml`: CI for every PR (also called by CD). `.github/workflows/cd.yml`: on `main`, runs CI, then deploys ephemeral staging. after approval it migrates production with `scripts/migrate.mjs`, deploys, and tears staging down via `staging-teardown.yml`; shared deploy steps in `.github/actions/fly-deploy`. `Dockerfile`, `fly.toml`: the production image and Fly settings.
 - `src/index.test.ts` and `tests/`: Vitest and Playwright tests, respectively.
+
+## Svelte MCP server
+
+The `svelte` MCP server (`@sveltejs/mcp`, configured in `.mcp.json`) provides current Svelte 5 and SvelteKit documentation and static analysis. Use it for any Svelte or SvelteKit work:
+
+- `list-sections`: use this first for any Svelte or SvelteKit question, to find the relevant documentation sections.
+- `get-documentation`: after listing sections, read their `use_cases` and fetch every section relevant to the task.
+- `svelte-autofixer`: run it on any Svelte code before presenting it, and keep calling it until it reports no issues or suggestions.
+- `playground-link`: after finishing code, ask the user whether they want a playground link. Generate one only after they confirm, and never when the code was written to files in this project.
