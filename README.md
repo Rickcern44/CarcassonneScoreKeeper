@@ -47,6 +47,10 @@ On first run the dashboard prompts for the `app-password` parameter. To supply i
 
 `aspire init` also installed Aspire agent skills in `.claude/skills/` (including `playwright-cli`). They are vendored third-party content and are excluded from Biome. The Aspire CLI sends usage telemetry for these skills; set `ASPIRE_CLI_TELEMETRY_OPTOUT=true` to opt out.
 
+### Svelte MCP server for coding agents (optional)
+
+`.mcp.json` registers the `svelte` MCP server (`npx -y @sveltejs/mcp`), which gives coding agents current Svelte 5 and SvelteKit docs and a static-analysis autofixer. Claude Code asks you to approve it once per project; no keys are needed. `AGENTS.md` tells agents when to use its tools. Claude Code also offers a per-user `svelte` plugin (`/plugin marketplace add sveltejs/ai-tools`, then `/plugin install svelte`) that adds Svelte skills and a Svelte-editing subagent. See the [Svelte AI docs](https://svelte.dev/docs/ai/overview).
+
 ## Database
 
 Data is stored in Postgres through [Drizzle ORM](https://orm.drizzle.team) with the `postgres` driver. Locally, Aspire runs Postgres in a container; production is planned to use a single Neon instance. Tables: `players`, `games`, `game_players` (a game's players and their meeple colors) and `score_events` (signed points; a player's score is the sum of their events, and Undo deletes the latest one).
