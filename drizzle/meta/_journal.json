@@ -15,6 +15,13 @@
       "when": 1793190859454,
       "tag": "0001_futuristic_meteorite",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793191856176,
+      "tag": "0002_great_green_goblin",
+      "breakpoints": true
     }
   ]
 }

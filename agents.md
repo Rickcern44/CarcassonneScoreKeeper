@@ -21,6 +21,6 @@ This repository is a work-in-progress Carcassonne scorekeeping application. Read
 - `src/routes/`: SvelteKit routes and server loads/actions.
 - `src/components/`: shared UI, including authentication and navigation.
 - `src/hooks.server.ts`: shared-password session check and route guard; login and logout actions are in `src/routes/+page.server.ts`.
-- `src/lib/server/db/`, `drizzle/`: Drizzle schema, client, and migrations. `src/lib/services/`: services, including session signing, the Drizzle-backed player service, and an empty new-game service.
+- `src/lib/server/db/`, `drizzle/`: Drizzle schema, client, and migrations. `src/lib/services/`: services, including session signing, the Drizzle-backed player and game services (repository pattern, unit-tested with in-memory repositories), and an empty new-game service.
 - `aspire-apphost/apphost.mts`: optional Aspire AppHost that runs the app; `aspire-apphost/.aspire/` is generated, never edit it. `.claude/skills/` holds vendored Aspire skills.
 - `src/index.test.ts` and `tests/`: Vitest and Playwright tests, respectively.
