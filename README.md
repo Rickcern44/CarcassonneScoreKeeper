@@ -4,7 +4,7 @@ A work-in-progress scorekeeping tool for the board game Carcassonne. The intende
 
 ## Current state
 
-The app has a shared-password login, a player list and creation form backed by a temporary in-memory store, and an early game setup screen. Starting a game, recording scores, and game history are not implemented in the current UI. See [repository assessment and next steps](docs/assessment.md) for evidence, risks, and open product questions.
+The app has a shared-password login, a player list and creation form backed by Postgres (via Drizzle ORM), and an early game setup screen. Starting a game, recording scores, and game history are not implemented in the current UI. See [repository assessment and next steps](docs/assessment.md) for evidence, risks, and open product questions.
 
 ## Local development
 
@@ -15,17 +15,18 @@ npm install
 npm run dev
 ```
 
-Set the shared login password as a private server environment variable, for example in a local `.env` file:
+Set the shared login password and database URL as private server environment variables, for example in a local `.env` file:
 
 ```dotenv
 APP_PASSWORD=choose-a-strong-shared-password
+DATABASE_URL=postgresql://user:password@localhost:5432/carcassonne
 ```
 
 Everyone signs in on `/` with this one password. Every other page redirects to `/` until the user signs in. Sessions are stored in an `httpOnly` cookie that lasts 30 days. The cookie is signed with the current password. To rotate the password, change `APP_PASSWORD` and restart the server; this signs out every existing session. If `APP_PASSWORD` is unset, login is refused. Never expose it as a `PUBLIC_` variable. Login is not yet rate limited, so add rate limiting and HTTPS before exposing the app publicly.
 
 ### Running with Aspire (optional)
 
-An [Aspire](https://aspire.dev) TypeScript AppHost in `aspire-apphost/` starts the app and is where future services (such as a database) will be declared. It is optional; `npm run dev` still runs the app on its own. It currently registers only the SvelteKit app.
+An [Aspire](https://aspire.dev) TypeScript AppHost in `aspire-apphost/` starts the app and a local Postgres database. It is optional; `npm run dev` still runs the app on its own, but then you must provide your own `DATABASE_URL`. It registers a Postgres container (with a persistent data volume), a `db-migrate` step that applies Drizzle migrations, and the SvelteKit app, which waits for the migrations and receives `DATABASE_URL`. The Postgres container requires Docker or Podman.
 
 Install the [Aspire CLI](https://aspire.dev/get-started/install-cli/), run `npm install` in `aspire-apphost/` once, and supply the shared password as an Aspire secret parameter:
 
@@ -38,7 +39,16 @@ On first run the dashboard prompts for the `app-password` parameter. To supply i
 
 `aspire init` also installed Aspire agent skills in `.claude/skills/` (including `playwright-cli`). They are vendored third-party content and are excluded from Biome. The Aspire CLI sends usage telemetry for these skills; set `ASPIRE_CLI_TELEMETRY_OPTOUT=true` to opt out.
 
-Players are kept in server memory (`src/lib/services/playerService.ts`) and are lost when the server restarts. A persistent database is planned but not implemented.
+## Database
+
+Data is stored in Postgres through [Drizzle ORM](https://orm.drizzle.team) with the `postgres` driver. Locally, Aspire runs Postgres in a container; production is planned to use a single Neon instance. The only table so far is `players`. Games and scores are not modeled yet.
+
+- Schema: `src/lib/server/db/schema.ts`; client: `src/lib/server/db/index.ts` (reads the private `DATABASE_URL`).
+- `npm run db:generate` creates a migration in `drizzle/` after a schema change; commit the result.
+- `npm run db:migrate` applies migrations to `DATABASE_URL`. Aspire runs it automatically for the local database. For production, run it in CD, not at app startup.
+- With Neon, use the direct (non-pooled) connection string for `db:migrate`. The pooled string is fine for the running app.
+
+Unit tests use an in-memory repository and need no database. The Drizzle repository has not been covered by automated tests; Aspire/Docker integration tests are a separate piece of work.
 
 ## Checks
 

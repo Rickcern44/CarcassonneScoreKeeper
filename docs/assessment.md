@@ -5,16 +5,16 @@ This is a source review snapshot, not a verified runtime or security audit. Sugg
 ## Direction agreed so far
 
 - Keep costs free or very low while evaluating whether the app is worth continuing. Favor a simple architecture that is easy to abandon or move.
-- Keep SvelteKit as a single application service. Supabase has been removed (issue #14). Player data is held in memory as a stand-in; SQLite with Drizzle is the preferred persistent replacement but is not implemented.
-- Start with local development and defer the hosting choice until the app is ready to share. A deployed SQLite database needs persistent storage and backups; DigitalOcean App Platform does not currently support persistent volumes. Consider a persistent host or low-cost Droplet, or revisit managed Postgres such as Neon if that better fits the available hosting and budget. Neon is still a SaaS dependency. Verify current hosting prices and limits before choosing.
-- An optional Aspire TypeScript AppHost (`aspire-apphost/`, issue #16) runs the SvelteKit app and receives `APP_PASSWORD` as a secret parameter. It registers no other resources yet; a database would be added there.
+- Keep SvelteKit as a single application service. Supabase has been removed (issue #14). Persistence is Postgres through Drizzle ORM (issue #15): a Postgres container run by the Aspire AppHost locally, and a single Neon instance planned for production.
+- Start with local development and defer the app hosting choice until the app is ready to share. The database is Neon Postgres, which is a SaaS dependency; the Drizzle schema and plain Postgres driver keep it movable to any Postgres. Verify current hosting and Neon prices and limits before choosing. Migrations are to be run in CD, not at app startup.
+- An optional Aspire TypeScript AppHost (`aspire-apphost/`, issue #16) runs the SvelteKit app and receives `APP_PASSWORD` as a secret parameter. It also runs a local Postgres container and a `db-migrate` step.
 - Shared access to all players and games is acceptable for now. A shared-password login is implemented: `APP_PASSWORD` is a private env var, and sessions are signed cookies keyed on that password, so changing it and restarting rotates the password and signs everyone out. HTTPS and login rate limiting are still needed before deployment. Individual accounts and private data are not required at this stage.
 - A suggested first playable slice is creating a game, adding players, adjusting scores, and finishing or revisiting a game. Automatic scoring and statistics can wait; the precise first-release scope remains to be confirmed.
 
 ## What exists
 
 - SvelteKit 2 / Svelte 5 app. `src/hooks.server.ts` verifies the session cookie and redirects every route except `/` (the login screen) when there is no valid session. Server hooks, loads, and actions are bundled into the SvelteKit app, not a separate API.
-- `/players` lists and creates players (duplicate and empty names are rejected) and `/players/[slug]` shows one, using the in-memory store in `src/lib/services/playerService.ts`. Data does not survive a server restart. Unit tests cover the store and session signing.
+- `/players` lists and creates players (duplicate and empty names are rejected) and `/players/[slug]` shows one, using the Postgres-backed `src/lib/services/playerService.ts` (Drizzle). Unit tests cover the service logic against an in-memory repository and session signing; the Drizzle repository itself is untested.
 - `/newgame` loads players and presents player/color selection. Its Start Game button has no handler, and `src/lib/services/newGameService.ts` is empty. There is no complete scoring or game-history flow apparent in the repository.
 - Playwright tests check the login screen and the unauthenticated redirect (`tests/test.ts`). `src/index.test.ts` is still an arithmetic placeholder.
 - Any player data previously stored in the remote Supabase project is not used by the app and was not migrated or deleted.
@@ -22,7 +22,7 @@ This is a source review snapshot, not a verified runtime or security audit. Sugg
 ## Suggested priorities
 
 1. **Agree on a first playable scope.** Decide the scoring workflow, supported rules, player model, and persistence expectations below. Define a small end-to-end acceptance scenario before implementation.
-2. **Establish a reproducible baseline and plan the transition.** Pin or document a supported Node version, install dependencies, and record results for the checks in the README. Decide whether any data left in the old Supabase project is worth importing into SQLite. `svelte-feather-icons` was previously only installed transitively through a Supabase package; it is now declared directly in `package.json`.
+2. **Establish a reproducible baseline and plan the transition.** Pin or document a supported Node version, install dependencies, and record results for the checks in the README. Decide whether any data left in the old Supabase project is worth importing into Postgres. `svelte-feather-icons` was previously only installed transitively through a Supabase package; it is now declared directly in `package.json`.
 3. **Harden access before deployment.** All routes except `/` require a session, enforced in `src/hooks.server.ts`. Add login rate limiting and serve over HTTPS before exposing the app publicly.
 4. **Make game setup reliable.** Review player/color selection and removal, validation, and error handling. In `src/routes/newgame/+page.svelte`, the Add button passes its click event to a function expecting player and color IDs, and selected colors are not removed from the available list. Specify expected behavior and cover it with tests before wiring game creation.
 5. **Implement the agreed scorekeeping slice.** Model and persist a game and score changes, display current scores, and support finishing a game, according to the chosen rules and ownership model. Add tests for the rules and a representative user journey.
