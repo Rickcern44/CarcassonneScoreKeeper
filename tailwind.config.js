@@ -14,7 +14,27 @@ module.exports = {
 		),
 	],
 	theme: {
-		extend: {},
+		extend: {
+			colors: {
+				bg: "var(--bg)",
+				surface: "var(--surface)",
+				ink: "var(--ink)",
+				muted: "var(--muted)",
+				line: "var(--line)",
+				meeple: {
+					red: "var(--meeple-red)",
+					blue: "var(--meeple-blue)",
+					green: "var(--meeple-green)",
+					yellow: "var(--meeple-yellow)",
+					black: "var(--meeple-black)",
+					gray: "var(--meeple-gray)",
+				},
+			},
+			fontFamily: {
+				display: ['"Fredoka"', '"Nunito"', "system-ui", "sans-serif"],
+				body: ['"Nunito"', "system-ui", "sans-serif"],
+			},
+		},
 	},
 	plugins: [
 		require("@tailwindcss/forms"),

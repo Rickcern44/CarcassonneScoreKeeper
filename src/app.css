@@ -2,7 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens. Components read these variables (via the Tailwind colors in
+ * tailwind.config.js), so dark mode only has to override the values below.
+ */
+:root {
+	--bg: #f5f0e4;
+	--surface: #ffffff;
+	--ink: #2a2220;
+	--muted: #6b5e52;
+	--line: #e3dacb;
+
+	--meeple-red: #c4392d;
+	--meeple-blue: #2f5fcc;
+	--meeple-green: #23864f;
+	--meeple-yellow: #f2b632;
+	--meeple-black: #2a2a2a;
+	--meeple-gray: #6b7280;
+
+	--on-meeple: #ffffff;
+	--on-meeple-yellow: #2a2220;
+}
+
+/*
+ * Dark values are supplied by the dark theme issue (#29): override the tokens
+ * above under a `.dark` selector.
+ */
+
 html,
 body {
-	@apply h-full overflow-hidden;
+	@apply h-full;
+	background-color: var(--bg);
+	color: var(--ink);
+	font-family: "Nunito", system-ui, sans-serif;
+}
+
+.font-display {
+	font-family: "Fredoka", "Nunito", system-ui, sans-serif;
 }
