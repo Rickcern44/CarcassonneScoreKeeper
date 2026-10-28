@@ -1,5 +1,5 @@
-# Fly.io app configuration. Deployed by .github/workflows/release.yml; cd.yml
-# deploys the same config as "<app>-staging".
+# Fly.io app configuration. Deployed by .github/workflows/cd.yml (as "<app>-staging"
+# first, then production after approval).
 # Change `app` (it must be unique across Fly) and `primary_region` to suit.
 app = "carcassonne-score-keeper"
 primary_region = "iad"
@@ -7,7 +7,7 @@ primary_region = "iad"
 [build]
 
 # Database migrations are not run here: the pipeline applies them to Neon
-# before it deploys (see cd.yml for staging, release.yml for production).
+# before it deploys (see cd.yml).
 
 [env]
   NODE_ENV = "production"
