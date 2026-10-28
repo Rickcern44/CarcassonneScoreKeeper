@@ -22,6 +22,7 @@ This is a source review snapshot, not a verified runtime or security audit. Sugg
 - **Scores are the sum of signed score events; Undo deletes the latest event.** Manual entry only: no Carcassonne scoring rules are built in.
 - **A game can be discarded** while active (deletes its scores). Finished games cannot be edited or discarded.
 - **Theme:** follows the device by default, with a System / Light / Dark override remembered on the device (`localStorage`).
+- **Installable, with read-only offline viewing (#44).** The app has a web manifest and a service worker. Pages already viewed (home, history, players, a game) stay readable offline, with a banner and scoring disabled; a page never viewed shows an offline page. Saved pages are cleared on logout. **Offline scoring (queued changes synced later) is deferred** to a later issue, because it needs a client-side store and a sync/conflict design that interacts with real-time scoring (#42).
 
 ## What exists
 
@@ -45,7 +46,7 @@ This is a source review snapshot, not a verified runtime or security audit. Sugg
 - Is this a simple manual score tracker, or should it calculate points for roads, cities, monasteries, fields, and other features? How should corrections and end-of-game scoring work?
 - Which edition and expansions are in scope? The setup screen currently offers six colors and caps selection at six; this is an implementation detail, not an agreed ruleset.
 - The shared password comes from the `APP_PASSWORD` env var and is rotated by changing it and restarting. Is rotation without a restart, or any recovery process, needed? Are temporary guest players needed?
-- Should games survive refresh and be resumable across devices? Is offline use important?
+- Should games be resumable across devices? Offline _viewing_ is done (see Decisions); is offline _scoring_ needed?
 - Are game history, statistics, ties, and undo required for the first release or later?
 
 ## Validation status

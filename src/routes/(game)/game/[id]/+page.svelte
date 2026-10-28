@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onDestroy } from "svelte";
 import { flip } from "svelte/animate";
+import { online } from "svelte/reactivity/window";
 import { RotateCcwIcon } from "svelte-feather-icons";
 import { meepleBg, meepleText } from "#lib/meeple.js";
 import { enhance } from "$app/forms";
@@ -58,6 +59,8 @@ $: shown = order.flatMap((id) => {
 	return player ? [{ ...player, rank: ranks[id] ?? player.rank }] : [];
 });
 $: active = detail.game.status === "active";
+// Saved pages can be read offline, but a form posted with no network would just fail.
+$: offline = !online.current;
 $: keypadPlayer = detail.players.find((p) => p.playerId === keypadFor);
 
 const pointsLabel = (points: number, name: string) =>
@@ -79,7 +82,7 @@ const pointsText = (points: number) =>
 		<form method="POST" action="?/undo" use:enhance>
 			<button
 				type="submit"
-				disabled={detail.eventCount === 0}
+				disabled={offline || detail.eventCount === 0}
 				class="flex min-h-[44px] items-center gap-2 rounded-2xl border-2 border-line bg-surface px-4 font-display text-lg font-semibold text-muted enabled:border-ink enabled:text-ink disabled:opacity-60"
 			>
 				<RotateCcwIcon size="20" />
@@ -140,17 +143,19 @@ const pointsText = (points: number) =>
 							<button
 								type="submit"
 								name="points"
+								disabled={offline}
 								value={points}
 								aria-label={pointsLabel(points, player.name)}
-								class="min-h-[52px] rounded-2xl bg-chip font-display text-xl font-bold text-on-chip"
+								class="min-h-[52px] rounded-2xl bg-chip font-display text-xl font-bold text-on-chip disabled:opacity-50"
 							>
 								{pointsText(points)}
 							</button>
 						{/each}
 						<button
 							type="button"
+							disabled={offline}
 							aria-label="Enter a custom amount for {player.name}"
-							class="flex min-h-[52px] items-center justify-center rounded-2xl bg-key text-on-key"
+							class="flex min-h-[52px] items-center justify-center rounded-2xl bg-key text-on-key disabled:opacity-50"
 							on:click={() => (keypadFor = player.playerId)}
 						>
 							<svg
@@ -188,7 +193,7 @@ const pointsText = (points: number) =>
 				</p>
 				<div class="mt-4 flex flex-col gap-3">
 					<form method="POST" action="?/finish" use:enhance>
-						<Button type="submit" block>Finish game</Button>
+						<Button type="submit" block disabled={offline}>Finish game</Button>
 					</form>
 					<Button
 						variant="secondary"
@@ -200,7 +205,8 @@ const pointsText = (points: number) =>
 					<form method="POST" action="?/discard" use:enhance>
 						<button
 							type="submit"
-							class="min-h-[44px] w-full text-sm font-bold text-muted underline"
+							disabled={offline}
+							class="min-h-[44px] w-full text-sm font-bold text-muted underline disabled:opacity-50"
 						>
 							Discard this game instead (deletes its scores)
 						</button>
@@ -211,6 +217,7 @@ const pointsText = (points: number) =>
 			<Button
 				variant="secondary"
 				block
+				disabled={offline}
 				on:click={() => (confirmingFinish = true)}
 			>
 				Finish game
