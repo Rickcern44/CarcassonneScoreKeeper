@@ -1,9 +1,9 @@
 import { fail } from "@sveltejs/kit";
-import { playerStore } from "$lib/services/playerService";
+import { playerService } from "$lib/services/playerService";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load = (async () => {
-	return { players: playerStore.list() };
+	return { players: await playerService.list() };
 }) satisfies PageServerLoad;
 
 export const actions = {
@@ -11,7 +11,9 @@ export const actions = {
 		const formData = await request.formData();
 		const name = formData.get("name");
 
-		const result = playerStore.create(typeof name === "string" ? name : "");
+		const result = await playerService.create(
+			typeof name === "string" ? name : "",
+		);
 		if (result.error) return fail(400, { error: result.error });
 
 		return { player: result.player };
