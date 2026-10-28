@@ -16,7 +16,7 @@ See [repository assessment and next steps](docs/assessment.md) for the decisions
 
 ## Local development
 
-The project uses SvelteKit 2, Svelte 5, Vite 7, TypeScript, Tailwind CSS, and Skeleton. It is one SvelteKit application: its hooks, server loads, and form actions run in the app server; no separately hosted API is required. Use Node.js 22.12 or later (the version required by Vite 7), then:
+The project uses SvelteKit 2, Svelte 5, Vite 7, TypeScript, Tailwind CSS, and Skeleton. It is one SvelteKit application: its hooks, server loads, and form actions run in the app server; no separately hosted API is required. Use Node.js 24 or later (the version CI and the Docker image run), then:
 
 ```sh
 npm install
