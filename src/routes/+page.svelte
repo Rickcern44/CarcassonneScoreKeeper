@@ -1,5 +1,4 @@
 <script lang="ts">
-import "../app.css";
 import Login from "../components/Login.svelte";
 import type { ActionData } from "./$types";
 
@@ -10,8 +9,6 @@ export let form: ActionData;
 	<title>Login</title>
 </svelte:head>
 
-<section class="flex container h-2/3 justify-center">
-	<div class="flex flex-center self-center">
-		<Login error={form?.error} />
-	</div>
-</section>
+<main class="mx-auto min-h-full max-w-md px-7 pb-10 pt-12">
+	<Login error={form?.error} />
+</main>

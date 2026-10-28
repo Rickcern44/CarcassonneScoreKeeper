@@ -20,6 +20,10 @@
 	--meeple-black: #2a2a2a;
 	--meeple-gray: #6b7280;
 
+	--tile-field: #a8ce8e;
+	--tile-road: #e8d3a2;
+	--tile-city: #c79a6b;
+
 	--on-meeple: #ffffff;
 	--on-meeple-yellow: #2a2220;
 }

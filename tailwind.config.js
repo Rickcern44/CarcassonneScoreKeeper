@@ -21,6 +21,11 @@ module.exports = {
 				ink: "var(--ink)",
 				muted: "var(--muted)",
 				line: "var(--line)",
+				tile: {
+					field: "var(--tile-field)",
+					road: "var(--tile-road)",
+					city: "var(--tile-city)",
+				},
 				meeple: {
 					red: "var(--meeple-red)",
 					blue: "var(--meeple-blue)",
