@@ -53,8 +53,8 @@ Data is stored in Postgres through [Drizzle ORM](https://orm.drizzle.team) with 
 
 - Schema: `src/lib/server/db/schema.ts`; client: `src/lib/server/db/index.ts` (reads the private `DATABASE_URL`).
 - `npm run db:generate` creates a migration in `drizzle/` after a schema change; commit the result.
-- `npm run db:migrate` applies migrations to `DATABASE_URL`. Aspire runs it automatically for the local database. For production, run it in CD, not at app startup.
-- With Neon, use the direct (non-pooled) connection string for `db:migrate`. The pooled string is fine for the running app.
+- `npm run db:migrate` applies migrations to `DATABASE_URL`. Aspire runs it automatically for the local database. In production the deploy runs `scripts/migrate.mjs` (Fly's `release_command`), never the app at startup.
+- With Neon, use the direct (non-pooled) connection string for migrations (`MIGRATE_DATABASE_URL`). The pooled string is fine for the running app (`DATABASE_URL`).
 
 Unit tests use in-memory repositories and need no database. `src/lib/services/gameService.integration.test.ts` runs the real Drizzle repositories and is skipped unless `TEST_DATABASE_URL` is set (see below).
 
@@ -68,7 +68,7 @@ npm run playwright-test   # Playwright; builds and starts a preview server
 npm run build
 ```
 
-Playwright also requires its browser dependencies (`npx playwright install`). `npm run playwright-test` covers the login screen and the unauthenticated redirect and needs no database.
+CI runs the same commands. Playwright also requires its browser dependencies (`npx playwright install`). `npm run playwright-test` covers the login screen and the unauthenticated redirect and needs no database.
 
 ### Tests that need Postgres
 
@@ -89,6 +89,45 @@ E2E_DATABASE_URL=postgresql://user:password@localhost:5432/carcassonne_test npm 
 ```
 
 With Aspire, start the app host (`aspire start`), copy the Postgres connection string from the dashboard, create a separate empty database in that container (for example `create database carcassonne_test`), and use that name in the URLs above. Without Aspire, any Postgres works, for example `docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=password postgres:17`. The journey leaves its data behind, so reset the database before running it again.
+
+## CI/CD and deployment
+
+One GitHub Actions workflow, `.github/workflows/ci-cd.yml`, does both.
+
+| When           | What runs                                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pull request   | `check`, `lint`, unit tests, build, the login Playwright tests; the service tests and the e2e journey against a Postgres service container |
+| Push to `main` | all of the above, then **deploy** to Fly.io, only if every job passed                                                                      |
+
+The deploy job sets the app's secrets, runs `flyctl deploy --remote-only`, and then requests the live login page to confirm it is up. Fly builds the `Dockerfile` (a SvelteKit `adapter-node` server), runs `node scripts/migrate.mjs` in a temporary machine before the new version starts, and stops the deploy if it fails. Settings (region, machine size, health check, one always-on machine) live in `fly.toml`. Deploys are serialized and never cancelled half way.
+
+Because migrations run while the previous version may still be serving, keep them backward compatible (add columns and tables; do not drop or rename in the same release as the code that stops using them).
+
+### One-time setup
+
+Infrastructure is not managed as code yet, so these are done by hand once:
+
+1. **Neon:** create a project (the free plan works) in a region near your Fly region. Copy two connection strings: the pooled one (host contains `-pooler`) for the app, and the direct one for migrations.
+2. **Fly.io:** run `fly auth login`, then create an organization-scoped token with `fly tokens create org`. An org token lets the first deploy create the app itself.
+3. **GitHub:** add these repository secrets (for example with `gh secret set NAME`, pasting the value when prompted), and never commit them.
+
+   | Secret                 | Value                                                                  |
+   | ---------------------- | ---------------------------------------------------------------------- |
+   | `FLY_API_TOKEN`        | the org token from step 2                                              |
+   | `APP_PASSWORD`         | the shared login password                                              |
+   | `DATABASE_URL`         | Neon pooled connection string                                          |
+   | `MIGRATE_DATABASE_URL` | Neon direct connection string (optional; falls back to `DATABASE_URL`) |
+
+   Optionally add a repository variable `FLY_ORG` (defaults to `personal`) and, under Settings > Environments > `production`, require a reviewer so deploys wait for approval.
+4. **`fly.toml`:** change `app` (it must be unique across Fly) and `primary_region` if you like.
+5. Merge to `main`. The first run creates the Fly app, sets the secrets, migrates the database and deploys it at `https://<app>.fly.dev`.
+
+### Operating it
+
+- Roll back with `fly releases` and `fly deploy --image <previous image>`, or revert the commit. Migrations only go forward, so a rollback does not undo schema changes.
+- Rotate the login password by updating the `APP_PASSWORD` secret and merging or re-running the workflow; this signs everyone out.
+- `docker build .` builds the same image locally, and `docker run -p 3000:3000 -e APP_PASSWORD=... -e DATABASE_URL=... <image>` runs it.
+- Not set up yet: infrastructure as code, a staging environment, PR preview deploys, and login rate limiting.
 
 ## Documentation
 
