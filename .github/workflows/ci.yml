@@ -1,18 +1,17 @@
-name: CI/CD
+name: CI
 
-# Every PR runs the checks. Every push to main runs them again and, if they
-# all pass, deploys to Fly.io (see fly.toml). Setup: README, "CI/CD".
+# Runs on every pull request, and is called by cd.yml before each deploy so the
+# same checks gate production. Setup and deploys: README, "CI/CD".
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 jobs:
   checks:
@@ -106,68 +105,3 @@ jobs:
           name: playwright-results
           path: test-results
           retention-days: 7
-
-  deploy:
-    name: Deploy to Fly.io
-    needs: [checks, database-tests, e2e]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: production
-    # Never run two deploys at once, and never cancel one half way.
-    concurrency:
-      group: deploy-production
-      cancel-in-progress: false
-    env:
-      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      FLY_ORG: ${{ vars.FLY_ORG || 'personal' }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: Read the app name from fly.toml
-        run: echo "APP=$(sed -n 's/^app = "\(.*\)"/\1/p' fly.toml)" >> "$GITHUB_ENV"
-
-      - name: Create the Fly app if it does not exist
-        run: |
-          if ! flyctl status --app "$APP" > /dev/null 2>&1; then
-            flyctl apps create "$APP" --org "$FLY_ORG"
-          fi
-
-      - name: Set secrets
-        env:
-          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          MIGRATE_DATABASE_URL: ${{ secrets.MIGRATE_DATABASE_URL }}
-        run: |
-          : "${APP_PASSWORD:?Set the APP_PASSWORD repository secret}"
-          : "${DATABASE_URL:?Set the DATABASE_URL repository secret}"
-          {
-            echo "APP_PASSWORD=$APP_PASSWORD"
-            echo "DATABASE_URL=$DATABASE_URL"
-            if [ -n "$MIGRATE_DATABASE_URL" ]; then
-              echo "MIGRATE_DATABASE_URL=$MIGRATE_DATABASE_URL"
-            fi
-          } | flyctl secrets import --stage --app "$APP"
-
-      # Fly builds the image, runs `node scripts/migrate.mjs` (release_command)
-      # and only then starts the new version. A failed migration stops here.
-      - name: Deploy
-        run: flyctl deploy --remote-only --app "$APP"
-
-      - name: Smoke test
-        run: |
-          url="https://$APP.fly.dev/"
-          for attempt in $(seq 1 10); do
-            if curl -fsS "$url" | grep -q "Table password"; then
-              echo "OK: $url is serving the login page."
-              exit 0
-            fi
-            echo "Attempt $attempt failed; retrying in 6s..."
-            sleep 6
-          done
-          echo "The app did not respond with the login page at $url" >&2
-          exit 1
-
-      - name: Show recent logs on failure
-        if: failure()
-        run: flyctl logs --app "$APP" --no-tail | tail -n 60

@@ -1,0 +1,90 @@
+name: CD
+
+# Runs on every merge to main: the full CI workflow first, then migrate the
+# database and deploy to Fly.io. If CI fails nothing is released.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Migrate and deploy
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: production
+    # Never run two releases at once, and never cancel one half way.
+    concurrency:
+      group: release-production
+      cancel-in-progress: false
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      FLY_ORG: ${{ vars.FLY_ORG || 'personal' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      # Runtime dependencies are all the migration script needs.
+      - run: npm ci --omit=dev
+
+      # Applies any new Drizzle migrations to Neon. A failure stops the release
+      # before the new code ships. Uses MIGRATE_DATABASE_URL (Neon's direct,
+      # non-pooled string) when set, else DATABASE_URL.
+      - name: Migrate the database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MIGRATE_DATABASE_URL: ${{ secrets.MIGRATE_DATABASE_URL }}
+        run: |
+          : "${MIGRATE_DATABASE_URL:-${DATABASE_URL:?Set the DATABASE_URL repository secret}}"
+          node scripts/migrate.mjs
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Read the app name from fly.toml
+        run: echo "APP=$(sed -n 's/^app = "\(.*\)"/\1/p' fly.toml)" >> "$GITHUB_ENV"
+
+      - name: Create the Fly app if it does not exist
+        run: |
+          if ! flyctl status --app "$APP" > /dev/null 2>&1; then
+            flyctl apps create "$APP" --org "$FLY_ORG"
+          fi
+
+      - name: Set secrets
+        env:
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          : "${APP_PASSWORD:?Set the APP_PASSWORD repository secret}"
+          : "${DATABASE_URL:?Set the DATABASE_URL repository secret}"
+          {
+            echo "APP_PASSWORD=$APP_PASSWORD"
+            echo "DATABASE_URL=$DATABASE_URL"
+          } | flyctl secrets import --stage --app "$APP"
+
+      - name: Deploy
+        run: flyctl deploy --remote-only --app "$APP"
+
+      - name: Smoke test
+        run: |
+          url="https://$APP.fly.dev/"
+          for attempt in $(seq 1 10); do
+            if curl -fsS "$url" | grep -q "Table password"; then
+              echo "OK: $url is serving the login page."
+              exit 0
+            fi
+            echo "Attempt $attempt failed; retrying in 6s..."
+            sleep 6
+          done
+          echo "The app did not respond with the login page at $url" >&2
+          exit 1
+
+      - name: Show recent logs on failure
+        if: failure()
+        run: flyctl logs --app "$APP" --no-tail | tail -n 60

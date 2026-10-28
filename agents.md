@@ -8,7 +8,7 @@ This repository is a work-in-progress Carcassonne scorekeeping application. Read
 
 - Work is tracked in GitHub issues (`gh issue list`, `gh issue view <n> --comments`). When the user refers to a task by name or number (for example "the app shell"), find the matching issue and treat its scope, out-of-scope, and done-when sections as the brief. Reference the issue in branch names, commits, and PRs.
 - `main` is the default branch. Start new work from an up-to-date `main` (`git fetch`, then branch from `origin/main`) and open PRs against `main`. Do not base work on `development` or on other feature branches unless asked.
-- Merging to `main` deploys to production on Fly.io through `.github/workflows/ci-cd.yml`. Never push to `main` directly; open a PR. Do not change the Fly.io app, the Neon database, or GitHub secrets without explicit authorization, and never put their values in the repository or in chat.
+- Merging to `main` deploys to production on Fly.io through `.github/workflows/cd.yml` (migrate, then deploy). Never push to `main` directly; open a PR. Do not change the Fly.io app, the Neon database, or GitHub secrets without explicit authorization, and never put their values in the repository or in chat.
 - Follow the user's requested scope. Do not implement proposed roadmap items unless asked.
 - Inspect relevant routes, services, tests, and existing changes before editing. Preserve unrelated user work.
 - Make focused changes consistent with the existing SvelteKit and TypeScript patterns. Avoid unrelated dependency upgrades or refactors.
@@ -24,5 +24,5 @@ This repository is a work-in-progress Carcassonne scorekeeping application. Read
 - `src/hooks.server.ts`: shared-password session check and route guard; login and logout actions are in `src/routes/+page.server.ts`.
 - `src/lib/server/db/`, `drizzle/`: Drizzle schema, client, and migrations. `src/lib/services/`: services, including session signing, the Drizzle-backed player and game services (repository pattern, unit-tested with in-memory repositories).
 - `aspire-apphost/apphost.mts`: optional Aspire AppHost that runs the app; `aspire-apphost/.aspire/` is generated, never edit it. `.claude/skills/` holds vendored Aspire skills.
-- `.github/workflows/ci-cd.yml`: CI for PRs and deploy to Fly.io on `main`. `Dockerfile`, `fly.toml`, `scripts/migrate.mjs`: the production image, Fly settings, and the migration run before each release.
+- `.github/workflows/ci.yml`: CI for every PR (also called by CD). `.github/workflows/cd.yml`: on `main`, runs CI, migrates the database with `scripts/migrate.mjs`, then deploys to Fly.io. `Dockerfile`, `fly.toml`: the production image and Fly settings.
 - `src/index.test.ts` and `tests/`: Vitest and Playwright tests, respectively.

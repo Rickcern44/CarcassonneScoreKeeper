@@ -53,7 +53,7 @@ Data is stored in Postgres through [Drizzle ORM](https://orm.drizzle.team) with 
 
 - Schema: `src/lib/server/db/schema.ts`; client: `src/lib/server/db/index.ts` (reads the private `DATABASE_URL`).
 - `npm run db:generate` creates a migration in `drizzle/` after a schema change; commit the result.
-- `npm run db:migrate` applies migrations to `DATABASE_URL`. Aspire runs it automatically for the local database. In production the deploy runs `scripts/migrate.mjs` (Fly's `release_command`), never the app at startup.
+- `npm run db:migrate` applies migrations to `DATABASE_URL`. Aspire runs it automatically for the local database. In production the CD workflow runs `scripts/migrate.mjs` before each deploy, never the app at startup.
 - With Neon, use the direct (non-pooled) connection string for migrations (`MIGRATE_DATABASE_URL`). The pooled string is fine for the running app (`DATABASE_URL`).
 
 Unit tests use in-memory repositories and need no database. `src/lib/services/gameService.integration.test.ts` runs the real Drizzle repositories and is skipped unless `TEST_DATABASE_URL` is set (see below).
@@ -92,16 +92,16 @@ With Aspire, start the app host (`aspire start`), copy the Postgres connection s
 
 ## CI/CD and deployment
 
-One GitHub Actions workflow, `.github/workflows/ci-cd.yml`, does both.
+Two GitHub Actions workflows, with no conditions to read: CI checks, CD releases.
 
-| When           | What runs                                                                                                                                  |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Pull request   | `check`, `lint`, unit tests, build, the login Playwright tests; the service tests and the e2e journey against a Postgres service container |
-| Push to `main` | all of the above, then **deploy** to Fly.io, only if every job passed                                                                      |
+| Workflow                   | Runs on                               | What it does                                                                                                                              |
+| -------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/ci.yml` | every pull request (and called by CD) | `check`, `lint`, unit tests, build, the login Playwright tests; the service tests and the e2e journey against Postgres service containers |
+| `.github/workflows/cd.yml` | every push to `main`                  | runs `ci.yml` first, then **Migrate and deploy**: applies new migrations to Neon, then deploys to Fly.io                                  |
 
-The deploy job sets the app's secrets, runs `flyctl deploy --remote-only`, and then requests the live login page to confirm it is up. Fly builds the `Dockerfile` (a SvelteKit `adapter-node` server), runs `node scripts/migrate.mjs` in a temporary machine before the new version starts, and stops the deploy if it fails. Settings (region, machine size, health check, one always-on machine) live in `fly.toml`. Deploys are serialized and never cancelled half way.
+If CI fails, nothing is released. The release job runs `node scripts/migrate.mjs` against Neon (using `MIGRATE_DATABASE_URL`, falling back to `DATABASE_URL`), then sets the app's secrets, runs `flyctl deploy --remote-only` (Fly builds the `Dockerfile`, a SvelteKit `adapter-node` server), and requests the live login page to confirm it is up. A failed migration stops the release before the new code ships. Releases are serialized and never cancelled half way. Fly settings (region, machine size, health check, one always-on machine) live in `fly.toml`.
 
-Because migrations run while the previous version may still be serving, keep them backward compatible (add columns and tables; do not drop or rename in the same release as the code that stops using them).
+Because the database is migrated before the new code goes live (and the previous version keeps serving until then), keep migrations backward compatible: add columns and tables; do not drop or rename in the same release as the code that stops using them. If a deploy fails after its migration ran, the database stays ahead of the running code, which is safe for additive migrations.
 
 ### One-time setup
 
@@ -111,16 +111,16 @@ Infrastructure is not managed as code yet, so these are done by hand once:
 2. **Fly.io:** run `fly auth login`, then create an organization-scoped token with `fly tokens create org`. An org token lets the first deploy create the app itself.
 3. **GitHub:** add these repository secrets (for example with `gh secret set NAME`, pasting the value when prompted), and never commit them.
 
-   | Secret                 | Value                                                                  |
-   | ---------------------- | ---------------------------------------------------------------------- |
-   | `FLY_API_TOKEN`        | the org token from step 2                                              |
-   | `APP_PASSWORD`         | the shared login password                                              |
-   | `DATABASE_URL`         | Neon pooled connection string                                          |
-   | `MIGRATE_DATABASE_URL` | Neon direct connection string (optional; falls back to `DATABASE_URL`) |
+   | Secret                 | Value                                                                                        |
+   | ---------------------- | -------------------------------------------------------------------------------------------- |
+   | `FLY_API_TOKEN`        | the org token from step 2                                                                    |
+   | `APP_PASSWORD`         | the shared login password                                                                    |
+   | `DATABASE_URL`         | Neon pooled connection string                                                                |
+   | `MIGRATE_DATABASE_URL` | Neon direct connection string, used only to migrate (optional; falls back to `DATABASE_URL`) |
 
    Optionally add a repository variable `FLY_ORG` (defaults to `personal`) and, under Settings > Environments > `production`, require a reviewer so deploys wait for approval.
 4. **`fly.toml`:** change `app` (it must be unique across Fly) and `primary_region` if you like.
-5. Merge to `main`. The first run creates the Fly app, sets the secrets, migrates the database and deploys it at `https://<app>.fly.dev`.
+5. Merge to `main`. The first release migrates the database, creates the Fly app, sets the secrets and deploys it at `https://<app>.fly.dev`.
 
 ### Operating it
 
