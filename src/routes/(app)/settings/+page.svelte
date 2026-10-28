@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount } from "svelte";
+import { clearDataCaches } from "#lib/offline.js";
 import { getThemeMode, setThemeMode, type ThemeMode } from "#lib/theme.js";
 import Button from "../../../components/Button.svelte";
 import PageTitle from "../../../components/PageTitle.svelte";
@@ -15,6 +16,14 @@ let mode: ThemeMode = "system";
 onMount(() => {
 	mode = getThemeMode();
 });
+
+// Saved pages hold the table's scores, so remove them before the session ends.
+async function logout(event: SubmitEvent) {
+	event.preventDefault();
+	const form = event.currentTarget as HTMLFormElement;
+	await clearDataCaches();
+	form.submit();
+}
 
 function choose(value: ThemeMode) {
 	mode = value;
@@ -50,6 +59,6 @@ function choose(value: ThemeMode) {
 	</div>
 </fieldset>
 
-<form method="post" action="/?/logout" class="mt-8">
+<form method="post" action="/?/logout" class="mt-8" on:submit={logout}>
 	<Button type="submit" variant="secondary" block>Logout</Button>
 </form>

@@ -51,6 +51,12 @@ On first run the dashboard prompts for the `app-password` parameter. To supply i
 
 `.mcp.json` registers the `svelte` MCP server (`npx -y @sveltejs/mcp`), which gives coding agents current Svelte 5 and SvelteKit docs and a static-analysis autofixer. Claude Code asks you to approve it once per project; no keys are needed. `AGENTS.md` tells agents when to use its tools. Claude Code also offers a per-user `svelte` plugin (`/plugin marketplace add sveltejs/ai-tools`, then `/plugin install svelte`) that adds Svelte skills and a Svelte-editing subagent. See the [Svelte AI docs](https://svelte.dev/docs/ai/overview).
 
+### Installable app and offline viewing
+
+Carc Keeper is a PWA: it has a web manifest (`static/manifest.webmanifest`, icons in `static/`) and a service worker (`src/service-worker/index.ts`, rules in `src/lib/offline.ts`). Browsers offer to install it, and pages you have already viewed (home, history, players, a game) stay readable offline with scoring disabled. Pages not yet viewed show `static/offline.html`. Offline _scoring_ is not supported. The worker clears its saved pages on logout; to add a page to the offline set, add it to the allow-list in `src/lib/offline.ts`.
+
+SvelteKit only registers the worker in production builds, not `vite dev`. To try it, run `npm run build && npm run preview`, open the app, and use DevTools > Application (Service Workers, Cache Storage, Manifest). To reset it there, choose Unregister and Clear site data.
+
 ## Database
 
 Data is stored in Postgres through [Drizzle ORM](https://orm.drizzle.team) with the `postgres` driver. Locally, Aspire runs Postgres in a container; production is planned to use a single Neon instance. Tables: `players`, `games`, `game_players` (a game's players and their meeple colors) and `score_events` (signed points; a player's score is the sum of their events, and Undo deletes the latest one).

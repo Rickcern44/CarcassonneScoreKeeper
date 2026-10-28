@@ -1,5 +1,6 @@
 <script lang="ts">
 import { SettingsIcon } from "svelte-feather-icons";
+import OfflineBanner from "../../components/OfflineBanner.svelte";
 import TabBar from "../../components/TabBar.svelte";
 </script>
 
@@ -13,6 +14,7 @@ import TabBar from "../../components/TabBar.svelte";
 			<SettingsIcon size="24" />
 		</a>
 	</div>
+	<OfflineBanner />
 	<main>
 		<slot />
 	</main>

@@ -1,4 +1,5 @@
 <script lang="ts">
+import { online } from "svelte/reactivity/window";
 import { joinNames } from "#lib/format.js";
 import { meepleBg, meepleText } from "#lib/meeple.js";
 import type { GameDetail } from "#lib/services/gameService.js";
@@ -10,6 +11,7 @@ import RankRow from "./RankRow.svelte";
 export let detail: GameDetail;
 export let error: string | undefined = undefined;
 
+$: offline = !online.current;
 $: winners = detail.players.filter((player) => player.rank === 1);
 $: tied = winners.length > 1;
 $: leader = winners[0];
@@ -57,7 +59,9 @@ $: leader = winners[0];
 
 <div class="mt-8 flex flex-col gap-3">
 	<form method="POST" action="?/rematch" use:enhance>
-		<Button type="submit" block>Rematch with the same players</Button>
+		<Button type="submit" block disabled={offline}
+			>Rematch with the same players</Button
+		>
 	</form>
 	<Button href="/home" variant="secondary" block>Back to home</Button>
 </div>

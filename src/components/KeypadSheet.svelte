@@ -1,11 +1,14 @@
 <script lang="ts">
 import { createEventDispatcher, onMount } from "svelte";
+import { online } from "svelte/reactivity/window";
 import { DeleteIcon } from "svelte-feather-icons";
 import { enhance } from "$app/forms";
 
 export let playerId: string;
 export let name: string;
 export let score: number;
+
+$: offline = !online.current;
 
 const MAX_DIGITS = 3;
 const dispatch = createEventDispatcher<{ close: undefined }>();
@@ -173,7 +176,7 @@ const keyClass =
 			<input type="hidden" name="points" value={signed}>
 			<button
 				type="submit"
-				disabled={amount === 0}
+				disabled={offline || amount === 0}
 				class="min-h-[56px] w-full rounded-2xl border-2 border-shadow-ink bg-meeple-yellow font-display text-xl font-semibold text-on-yellow shadow-[0_4px_0_0_var(--shadow-ink)] disabled:opacity-50"
 			>
 				{confirmLabel}
