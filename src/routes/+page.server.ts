@@ -1,50 +1,50 @@
-import { redirect } from "@sveltejs/kit";
+import { fail, redirect } from "@sveltejs/kit";
+import { env } from "$env/dynamic/private";
+import {
+	createSessionToken,
+	passwordMatches,
+	SESSION_COOKIE,
+	SESSION_MAX_AGE_SECONDS,
+} from "$lib/services/sessionService";
 import type { Actions, PageServerLoad } from "./$types";
 
-export const load = (async ({ url, locals: { getSession } }) => {
-	const session = await getSession();
-
-	// if the user is already logged in return them to the account page
-	if (session) {
+export const load = (async ({ locals: { authenticated } }) => {
+	// if the user is already logged in return them to the home page
+	if (authenticated) {
 		throw redirect(303, "/home");
 	}
-
-	return { url: url.origin };
 }) satisfies PageServerLoad;
 
 export const actions = {
-	login: async ({ request, locals: { supabase } }) => {
-		const formData = await request.formData();
-		const email: FormDataEntryValue | null = formData.get("username");
-		const password: FormDataEntryValue | null = formData.get("password");
-
-		if (email !== null && password !== null) {
-			const { error } = await supabase.auth.signInWithPassword({
-				email: email.toString(),
-				password: password.toString(),
+	login: async ({ request, cookies }) => {
+		const appPassword = env.APP_PASSWORD;
+		if (!appPassword) {
+			return fail(500, {
+				error: "Login is not configured. Set APP_PASSWORD on the server.",
 			});
-
-			if (error) {
-				//TODO: Replace with actual error handling
-				console.log(error);
-			}
 		}
+
+		const formData = await request.formData();
+		const password = formData.get("password");
+
+		if (
+			typeof password !== "string" ||
+			!passwordMatches(password, appPassword)
+		) {
+			return fail(401, { error: "Incorrect password." });
+		}
+
+		cookies.set(SESSION_COOKIE, createSessionToken(appPassword), {
+			path: "/",
+			httpOnly: true,
+			sameSite: "lax",
+			maxAge: SESSION_MAX_AGE_SECONDS,
+		});
+
+		throw redirect(303, "/home");
 	},
-	signup: async ({ request, locals: { supabase } }) => {
-		const formData = await request.formData();
-		const email: FormDataEntryValue | null = formData.get("username");
-		const password: FormDataEntryValue | null = formData.get("password");
-
-		if (email !== null && password !== null) {
-			const { error } = await supabase.auth.signUp({
-				email: email.toString(),
-				password: password.toString(),
-				options: { emailRedirectTo: "/auth/callback" },
-			});
-			if (error) {
-				//TODO: Replace with actual error handling
-				console.log(error);
-			}
-		}
+	logout: async ({ cookies }) => {
+		cookies.delete(SESSION_COOKIE, { path: "/" });
+		throw redirect(303, "/");
 	},
 } satisfies Actions;

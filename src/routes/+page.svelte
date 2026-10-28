@@ -1,11 +1,9 @@
 <script lang="ts">
 import "../app.css";
-import Authentication from "../components/Authentication.svelte";
-import type { PageData } from "./$types";
+import Login from "../components/Login.svelte";
+import type { ActionData } from "./$types";
 
-export let data: PageData;
-
-let { supabase } = data;
+export let form: ActionData;
 </script>
 
 <svelte:head>
@@ -14,6 +12,6 @@ let { supabase } = data;
 
 <section class="flex container h-2/3 justify-center">
 	<div class="flex flex-center self-center">
-		<Authentication {supabase} />
+		<Login error={form?.error} />
 	</div>
 </section>

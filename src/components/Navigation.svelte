@@ -1,20 +1,11 @@
 <script lang="ts">
 import { getDrawerStore } from "@skeletonlabs/skeleton";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { invalidateAll } from "$app/navigation";
 
-export let supabase: SupabaseClient;
 const drawerStore = getDrawerStore();
 
 function drawerClose(): void {
 	drawerStore.close();
 }
-
-const logout = async () => {
-	await supabase.auth.signOut();
-	await invalidateAll();
-	drawerClose();
-};
 </script>
 
 <nav class="list-nav p-4">
@@ -22,6 +13,10 @@ const logout = async () => {
 		<li><a href="/home" on:click={drawerClose}>Home</a></li>
 		<li><a href="/newgame" on:click={drawerClose}>New Game</a></li>
 		<li><a href="/players" on:click={drawerClose}>Players</a></li>
-		<li><button type="button" class="btn" on:click={logout}>Logout</button></li>
+		<li>
+			<form method="post" action="/?/logout">
+				<button type="submit" class="btn" on:click={drawerClose}>Logout</button>
+			</form>
+		</li>
 	</ul>
 </nav>

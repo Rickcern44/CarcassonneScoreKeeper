@@ -42,7 +42,7 @@ const editPlayer = () => {
 					type="text"
 					name="gamesPlayed"
 					id="gamesPlayed"
-					placeholder={data.gamesPlayed ?? 0}
+					placeholder="0"
 					disabled
 				>
 			</div>
@@ -53,7 +53,7 @@ const editPlayer = () => {
 					type="text"
 					name="gamesWon"
 					id="gamesWon"
-					placeholder={data.gamesWon ?? 0}
+					placeholder="0"
 					disabled
 				>
 			</div>

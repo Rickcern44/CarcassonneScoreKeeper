@@ -1,7 +1,6 @@
+import { playerStore } from "$lib/services/playerService";
 import type { PageServerLoad } from "./$types";
 
-export const load = (async ({ locals: { supabase } }) => {
-	const { data: players, error } = await supabase.from("Players").select("*");
-
-	return { players, error };
+export const load = (async () => {
+	return { players: playerStore.list() };
 }) satisfies PageServerLoad;
