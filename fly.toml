@@ -1,0 +1,42 @@
+# Fly.io app configuration. Deployed by .github/workflows/cd.yml (as "<app>-staging"
+# first, then production after approval).
+# Change `app` (it must be unique across Fly) and `primary_region` to suit.
+app = "carcassonne-score-keeper"
+primary_region = "iad"
+
+[build]
+
+# Database migrations are not run here: the pipeline applies them to Neon
+# before it deploys (see cd.yml).
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  # Fly's proxy talks to the app over http; this tells SvelteKit the request
+  # was really https (it reads Fly's X-Forwarded-Proto header).
+  PROTOCOL_HEADER = "x-forwarded-proto"
+  # Keep Node inside the 256 MB machine.
+  NODE_OPTIONS = "--max-old-space-size=192"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # One machine stays up; Neon scales to zero by itself. Set auto_stop_machines
+  # to "stop" and min_machines_running to 0 to scale to zero (slower first request).
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/"
+    # Checks don't follow the HTTPS redirect, so say the request was HTTPS.
+    [http_service.checks.headers]
+      X-Forwarded-Proto = "https"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

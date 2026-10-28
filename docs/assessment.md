@@ -2,7 +2,7 @@
 
 This is a source review snapshot, not a verified runtime or security audit. Suggestions are not approved requirements. Recheck the code and environment before acting.
 
-> **Update (mobile redesign, issues #20 to #30):** the first playable slice described below is now implemented: manual game scorekeeping with a mobile-first UI, history, player stats and a dark theme. The "What exists", "Suggested priorities" and "Validation status" sections below describe the earlier state and are kept as history; see the README for the current state and checks. Decisions taken along the way are listed under "Decisions recorded".
+> **Update (mobile redesign, issues #20 to #30):** the first playable slice described below is now implemented: manual game scorekeeping with a mobile-first UI, history, player stats and a dark theme. The "What exists", "Suggested priorities" and "Validation status" sections below describe the earlier state and are kept as history; see the README for the current state and checks. Decisions taken along the way are listed under "Decisions recorded". CI/CD to Fly.io (with Neon Postgres) is described in the README; infrastructure as code is deliberately not done yet.
 
 ## Direction agreed so far
 
