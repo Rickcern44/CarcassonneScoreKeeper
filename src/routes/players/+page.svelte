@@ -1,5 +1,6 @@
 <script>
 export let data;
+export let form;
 </script>
 
 <form method="POST" action="?/create">
@@ -15,6 +16,9 @@ export let data;
 			type="text"
 			placeholder="Enter Player Name"
 		>
+		{#if form?.error}
+			<p class="text-error-500 self-center mt-2" role="alert">{form.error}</p>
+		{/if}
 		<button class="btn" type="submit">Submit</button>
 	</div>
 </form>

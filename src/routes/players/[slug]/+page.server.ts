@@ -1,11 +1,11 @@
+import { error } from "@sveltejs/kit";
+import { playerStore } from "$lib/services/playerService";
 import type { PageServerLoad } from "./$types";
 
-export const load = (async ({ params, locals: { supabase } }) => {
-	const { data: player } = await supabase
-		.from("Players")
-		.select("*")
-		.eq("id", params.slug)
-		.single();
+export const load = (async ({ params }) => {
+	const player = playerStore.get(params.slug);
+
+	if (!player) throw error(404, "Player not found");
 
 	return player;
 }) satisfies PageServerLoad;
