@@ -8,6 +8,7 @@
 			"!!.DS_Store",
 			"!!node_modules",
 			"!!build",
+			"!!drizzle/meta",
 			"!!.svelte-kit",
 			"!!package",
 			"!!.env",
