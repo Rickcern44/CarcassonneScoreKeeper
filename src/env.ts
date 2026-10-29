@@ -5,4 +5,7 @@ import { defineEnvVars } from "@sveltejs/kit/env";
 export const variables = defineEnvVars({
 	APP_PASSWORD: { schema: (input) => input ?? "" },
 	DATABASE_URL: { schema: (input) => input ?? "" },
+	// Not a secret. "staging" or "development" mark a deployment; anything else,
+	// including unset, is production (see src/lib/appEnv.ts).
+	APP_ENV: { schema: (input) => input ?? "" },
 });
