@@ -75,6 +75,43 @@ describe.skipIf(!url)("game and player services against Postgres", () => {
 		expect((await games.get(rematch.game?.id ?? ""))?.players).toHaveLength(3);
 	});
 
+	it("lists the score log with window-function totals and removes any entry", async () => {
+		const ids = await seed(["Ada", "Ben"]);
+		const { game } = await games.create(
+			ids.map((playerId, i) => ({ playerId, color: colors[i] })),
+		);
+		const gameId = game?.id ?? "";
+		await games.addScore(gameId, ids[0], 5);
+		await games.addScore(gameId, ids[1], 3);
+		await games.addScore(gameId, ids[0], -2);
+		await games.addScore(gameId, ids[1], 4);
+		await games.addScore(gameId, ids[0], 8);
+
+		const log = await games.log((await games.get(gameId)) as never);
+		expect(log.map((e) => [e.name, e.points, e.runningTotal])).toEqual([
+			["Ada", 8, 11],
+			["Ben", 4, 7],
+			["Ada", -2, 3],
+			["Ben", 3, 3],
+			["Ada", 5, 5],
+		]);
+		const detail = await games.get(gameId);
+		expect(detail?.lastEventId).toBe(log[0].id);
+
+		// Remove a middle entry: totals follow, other games are untouched.
+		expect(await games.removeEntry(gameId, log[2].id)).toEqual({});
+		expect((await games.removeEntry(gameId, log[2].id)).error).toMatch(
+			/already removed/,
+		);
+		const after = await games.log((await games.get(gameId)) as never);
+		expect(after.map((e) => e.runningTotal)).toEqual([13, 7, 3, 5]);
+
+		await games.finish(gameId);
+		expect((await games.removeEntry(gameId, log[0].id)).error).toMatch(
+			/finished/,
+		);
+	});
+
 	it("allows only one active game and unique colors", async () => {
 		const ids = await seed(["Ada", "Ben"]);
 		const entries = ids.map((playerId, i) => ({ playerId, color: colors[i] }));

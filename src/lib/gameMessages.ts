@@ -4,7 +4,13 @@
 export type GameStatus = "active" | "finished";
 
 export type GameMessage =
-	| { type: "changed"; eventCount: number; status: GameStatus }
+	| {
+			type: "changed";
+			eventCount: number;
+			/** Highest score event id, or null; changes on every add, undo and removal. */
+			lastEventId: number | null;
+			status: GameStatus;
+	  }
 	| { type: "discarded" }
 	| { type: "rematch"; gameId: string };
 
@@ -18,11 +24,13 @@ export function parseGameMessage(raw: string): GameMessage | undefined {
 		if (
 			value?.type === "changed" &&
 			Number.isInteger(value.eventCount) &&
+			(value.lastEventId === null || Number.isInteger(value.lastEventId)) &&
 			(value.status === "active" || value.status === "finished")
 		) {
 			return {
 				type: "changed",
 				eventCount: value.eventCount,
+				lastEventId: value.lastEventId,
 				status: value.status,
 			};
 		}
@@ -33,9 +41,15 @@ export function parseGameMessage(raw: string): GameMessage | undefined {
 /** A change this screen already shows (for example its own) needs no reload. */
 export function isNewChange(
 	message: Extract<GameMessage, { type: "changed" }>,
-	shown: { eventCount: number; status: GameStatus },
+	shown: {
+		eventCount: number;
+		lastEventId: number | null;
+		status: GameStatus;
+	},
 ): boolean {
 	return (
-		message.eventCount !== shown.eventCount || message.status !== shown.status
+		message.eventCount !== shown.eventCount ||
+		message.lastEventId !== shown.lastEventId ||
+		message.status !== shown.status
 	);
 }
