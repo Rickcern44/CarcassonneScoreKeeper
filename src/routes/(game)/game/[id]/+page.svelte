@@ -1,7 +1,6 @@
 <script lang="ts">
 import { onDestroy, onMount } from "svelte";
 import { flip } from "svelte/animate";
-import { online } from "svelte/reactivity/window";
 import { ChevronUpIcon, RotateCcwIcon } from "svelte-feather-icons";
 import { relativeTime, signedPoints } from "#lib/format.js";
 import { isNewChange, parseGameMessage } from "#lib/gameMessages.js";
@@ -71,7 +70,48 @@ const pending = createPendingScores((entries) => {
 });
 let scoreError = "";
 
-const reload = () => invalidate("app:game");
+// Plain state rather than `online` from svelte/reactivity/window: the `$:`
+// statements below only re-run for variables of this component, so they would
+// never notice the device going offline or coming back.
+let isOnline = true;
+onMount(() => {
+	isOnline = navigator.onLine;
+	const up = () => (isOnline = true);
+	const down = () => (isOnline = false);
+	window.addEventListener("online", up);
+	window.addEventListener("offline", down);
+	return () => {
+		window.removeEventListener("online", up);
+		window.removeEventListener("offline", down);
+	};
+});
+
+// Live updates and reconnects both land here. Missed updates are fetched when
+// the device is back online; see sync().
+let missedUpdates = false;
+let retryTimer: ReturnType<typeof setTimeout> | undefined;
+const RETRY_MS = 5000;
+
+/**
+ * Reloads the game. Never while offline: a saved page has no data to serve for
+ * the request, and SvelteKit would replace this page with an error page that
+ * never recovers. A failed reload keeps the scores on screen and is retried.
+ */
+async function reload(): Promise<boolean> {
+	if (!isOnline) {
+		missedUpdates = true;
+		return false;
+	}
+	try {
+		await invalidate("app:game");
+		return true;
+	} catch {
+		missedUpdates = true;
+		clearTimeout(retryTimer);
+		retryTimer = setTimeout(sync, RETRY_MS);
+		return false;
+	}
+}
 
 let reconciling = false;
 async function reconcile() {
@@ -79,7 +119,8 @@ async function reconcile() {
 	reconciling = true;
 	try {
 		for (let ids = pending.settled(); ids.length > 0; ids = pending.settled()) {
-			await reload();
+			// Without fresh data the saved taps stay shown, so nothing is lost.
+			if (!(await reload())) break;
 			pending.drop(ids);
 		}
 	} finally {
@@ -108,11 +149,17 @@ const saveScore: SubmitFunction = ({ formData }) => {
 
 // Live updates: the server says when this game changed, then the game reloads.
 let source: EventSource | undefined;
-let missedUpdates = false;
 
 function sync() {
+	if (!isOnline) {
+		missedUpdates = true;
+		return;
+	}
 	// Our own taps reload when they settle; a reload now could count them twice.
-	if (!pending.active) reload();
+	if (pending.inFlight) return;
+	missedUpdates = false;
+	if (pending.active) reconcile();
+	else reload();
 }
 
 function disconnect() {
@@ -162,12 +209,13 @@ $: serverView = {
 };
 // Closed while offline (see the offline banner); resyncs when it is reopened.
 $: if (browser) {
-	if (online.current) connect(gameId);
+	if (isOnline) connect(gameId);
 	else disconnect();
 }
 
 onDestroy(() => {
 	clearTimeout(reorderTimer);
+	clearTimeout(retryTimer);
 	source?.close();
 });
 
@@ -181,7 +229,7 @@ $: shown = order.flatMap((id) => {
 $: unconfirmed = pendingEntries.length > 0;
 $: active = detail.game.status === "active";
 // Saved pages can be read offline, but a form posted with no network would just fail.
-$: offline = !online.current;
+$: offline = !isOnline;
 $: keypadPlayer = shown.find((p) => p.playerId === keypadFor);
 
 const pointsLabel = (points: number, name: string) =>

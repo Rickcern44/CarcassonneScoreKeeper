@@ -1,57 +1,8 @@
-import { type Browser, expect, type Page, test } from "@playwright/test";
+import type { Browser, Page } from "@playwright/test";
+import { add, card, expect, finish, newPage, startGame, test } from "./helpers";
 
-const PASSWORD = "playwright-test";
-
-// Needs a migrated Postgres: see "End-to-end tests" in the README. Each test
-// ends its game, so the next one can start (only one game is active at a time).
-
-async function newPage(browser: Browser): Promise<Page> {
-	const context = await browser.newContext();
-	const page = await context.newPage();
-	await page.goto("/");
-	await page.getByLabel("Table password").fill(PASSWORD);
-	await page.getByRole("button", { name: "Let's play" }).click();
-	await expect(page).toHaveURL("/home");
-	return page;
-}
-
-/** Adds two uniquely named players, starts a game with them, returns the names. */
-async function startGame(page: Page) {
-	const suffix = Math.random().toString(36).slice(2, 7);
-	const names = [`Ann${suffix}`, `Bob${suffix}`];
-	await page.goto("/players");
-	for (const name of names) {
-		await page.getByLabel("Player name").fill(name);
-		await page.getByRole("button", { name: "Add" }).click();
-		await expect(page.getByRole("list").getByText(name)).toBeVisible();
-	}
-	await page.goto("/newgame");
-	for (const name of names) {
-		await page.locator("label", { hasText: name }).click();
-		await expect(page.getByRole("checkbox", { name })).toBeChecked();
-	}
-	await page.getByRole("button", { name: "Start game · 2 players" }).click();
-	await expect(page).toHaveURL(/\/game\/[0-9a-f-]{36}$/);
-	return names;
-}
-
-const card = (page: Page, name: string, score: number) =>
-	page.getByRole("button", {
-		name: new RegExp(`^${name}, rank \\d, ${score} points$`),
-	});
-
-/** Taps a quick-point button, opening the player's card first unless it is open. */
-async function add(page: Page, name: string, points: number) {
-	const button = page.getByRole("button", {
-		name: `Add ${points} point${points === 1 ? "" : "s"} to ${name}`,
-	});
-	if (!(await button.isVisible())) {
-		await page
-			.getByRole("button", { name: new RegExp(`^${name}, rank`) })
-			.click();
-	}
-	await button.click();
-}
+// Needs a migrated Postgres: see "End-to-end tests" in the README.
+// A clean-up after every test discards a game left active by a failure.
 
 test("a second device follows scores, undo and finish live", async ({
 	browser,
@@ -120,25 +71,119 @@ test("a rematch moves the other device to the new game", async ({
 	await expect(a.getByRole("heading", { name: "Game over" })).toBeVisible();
 });
 
-test("a device that was offline catches up when it reconnects", async ({
-	browser,
-}) => {
+/** Device B has the game open; A scores. Returns both pages and the player. */
+async function twoDevices(browser: Browser) {
 	const a = await newPage(browser);
 	const [ann] = await startGame(a);
 	const b = await newPage(browser);
+	// Remember each live connection, so a test can hand it a message by hand.
+	await b.addInitScript(() => {
+		const Real = window.EventSource;
+		const seen: EventSource[] = [];
+		(window as unknown as { __sources: EventSource[] }).__sources = seen;
+		window.EventSource = class extends Real {
+			constructor(url: string | URL, init?: EventSourceInit) {
+				super(url, init);
+				seen.push(this);
+			}
+		};
+	});
 	await b.goto(a.url());
 	await expect(card(b, ann, 0)).toBeVisible();
+	return { a, b, ann };
+}
 
-	await b.context().setOffline(true);
+/** Goes offline and waits until the page has noticed (banner showing). */
+async function goOffline(page: Page) {
+	await page.context().setOffline(true);
+	await expect(page.getByRole("status")).toContainText("Offline");
+}
+
+const noErrorPage = (page: Page) =>
+	expect(page.getByText("Internal Error")).toHaveCount(0);
+
+test("a device that was offline catches up when it reconnects", async ({
+	browser,
+}) => {
+	const { a, b, ann } = await twoDevices(browser);
+
+	await goOffline(b);
+	// Changes are off while offline.
+	await b.getByRole("button", { name: new RegExp(`^${ann}, rank`) }).click();
+	await expect(
+		b.getByRole("button", { name: `Add 5 points to ${ann}` }),
+	).toBeDisabled();
 	await add(a, ann, 5);
+	await expect(card(a, ann, 5)).toBeVisible();
+	await expect(card(b, ann, 0)).toBeVisible();
+	await noErrorPage(b);
+
+	await b.context().setOffline(false);
+	await expect(card(b, ann, 5)).toBeVisible({ timeout: 5000 });
+	await expect(b.getByRole("status")).toHaveCount(0);
+	await noErrorPage(b);
+	await finish(a);
+});
+
+test("switching back to the tab while offline keeps the saved scores, then catches up", async ({
+	browser,
+}) => {
+	const { a, b, ann } = await twoDevices(browser);
+	await add(a, ann, 3);
+	await expect(card(b, ann, 3)).toBeVisible({ timeout: 2000 });
+
+	await goOffline(b);
+	await add(a, ann, 1);
+	await b.evaluate(() => {
+		Object.defineProperty(document, "visibilityState", {
+			configurable: true,
+			get: () => "visible",
+		});
+		document.dispatchEvent(new Event("visibilitychange"));
+	});
+	await b.waitForTimeout(500);
+	await noErrorPage(b);
+	await expect(card(b, ann, 3)).toBeVisible();
+	await expect(b.getByRole("status")).toContainText("Offline");
+
+	await b.context().setOffline(false);
+	await expect(card(b, ann, 4)).toBeVisible({ timeout: 5000 });
+	await noErrorPage(b);
+	await finish(a);
+});
+
+test("a change that arrives on a connection that is still open while offline is held until reconnect", async ({
+	browser,
+}) => {
+	const { a, b, ann } = await twoDevices(browser);
+
+	await goOffline(b);
+	await add(a, ann, 5);
+	// The live connection may outlive the loss of signal for a moment: hand it
+	// the message the server would have sent.
+	await b.evaluate(() => {
+		const sources = (window as unknown as { __sources: EventSource[] })
+			.__sources;
+		const message = {
+			type: "changed",
+			eventCount: 1,
+			lastEventId: 1e9,
+			status: "active",
+		};
+		sources
+			.at(-1)
+			?.onmessage?.(
+				new MessageEvent("message", { data: JSON.stringify(message) }),
+			);
+	});
+	await b.waitForTimeout(500);
+	await noErrorPage(b);
 	await expect(card(b, ann, 0)).toBeVisible();
 
 	await b.context().setOffline(false);
 	await expect(card(b, ann, 5)).toBeVisible({ timeout: 5000 });
-
-	await a.getByRole("button", { name: "Finish game" }).click();
-	await a.getByRole("button", { name: "Finish game" }).last().click();
-	await expect(a.getByRole("heading", { name: "Game over" })).toBeVisible();
+	await noErrorPage(b);
+	await finish(a);
 });
 
 test("tapped points show before the server replies, and a failed save rolls back", async ({
