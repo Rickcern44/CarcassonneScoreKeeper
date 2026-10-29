@@ -24,10 +24,15 @@ describe("gameEventStream", () => {
 		expect(await readNext(reader)).toContain(": connected");
 
 		events.publish("other", { type: "discarded" });
-		events.publish("g", { type: "changed", eventCount: 3, status: "active" });
+		events.publish("g", {
+			type: "changed",
+			eventCount: 3,
+			lastEventId: 3,
+			status: "active",
+		});
 
 		expect(await readNext(reader)).toBe(
-			'data: {"type":"changed","eventCount":3,"status":"active"}\n\n',
+			'data: {"type":"changed","eventCount":3,"lastEventId":3,"status":"active"}\n\n',
 		);
 	});
 

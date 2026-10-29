@@ -1,8 +1,9 @@
 <script lang="ts">
-import { onDestroy } from "svelte";
+import { onDestroy, onMount } from "svelte";
 import { flip } from "svelte/animate";
 import { online } from "svelte/reactivity/window";
-import { RotateCcwIcon } from "svelte-feather-icons";
+import { ChevronUpIcon, RotateCcwIcon } from "svelte-feather-icons";
+import { relativeTime, signedPoints } from "#lib/format.js";
 import { isNewChange, parseGameMessage } from "#lib/gameMessages.js";
 import { meepleBg, meepleText } from "#lib/meeple.js";
 import {
@@ -10,13 +11,16 @@ import {
 	type PendingScore,
 	withPending,
 } from "#lib/pendingScores.js";
+import { buildLogRows } from "#lib/scoreLog.js";
 import { browser } from "$app/env";
 import { enhance, type SubmitFunction } from "$app/forms";
 import { goto, invalidate } from "$app/navigation";
 import Button from "../../../../components/Button.svelte";
 import GameResults from "../../../../components/GameResults.svelte";
 import KeypadSheet from "../../../../components/KeypadSheet.svelte";
+import MeepleDot from "../../../../components/MeepleDot.svelte";
 import PageHeader from "../../../../components/PageHeader.svelte";
+import ScoreLogSheet from "../../../../components/ScoreLogSheet.svelte";
 import type { ActionData, PageData } from "./$types";
 
 export let data: PageData;
@@ -31,6 +35,7 @@ const REORDER_DELAY_MS = 1500;
 let selectedId: string | null = null;
 let keypadFor: string | null = null;
 let confirmingFinish = false;
+let logOpen = false;
 
 let shownGameId = "";
 let order: string[] = [];
@@ -147,10 +152,12 @@ $: if (gameId !== uiGameId) {
 	selectedId = null;
 	keypadFor = null;
 	confirmingFinish = false;
+	logOpen = false;
 	scoreError = "";
 }
 $: serverView = {
 	eventCount: data.detail.eventCount,
+	lastEventId: data.detail.lastEventId,
 	status: data.detail.game.status,
 };
 // Closed while offline (see the offline banner); resyncs when it is reopened.
@@ -181,8 +188,21 @@ const pointsLabel = (points: number, name: string) =>
 	points < 0
 		? `Subtract ${Math.abs(points)} point from ${name}`
 		: `Add ${points} point${points === 1 ? "" : "s"} to ${name}`;
-const pointsText = (points: number) =>
-	points < 0 ? `−${-points}` : `+${points}`;
+const pointsText = signedPoints;
+
+// Relative times in the strip and log tick along without a reload.
+let now = new Date();
+onMount(() => {
+	const timer = setInterval(() => (now = new Date()), 30_000);
+	return () => clearInterval(timer);
+});
+
+$: logRows = buildLogRows(data.detail.players, pendingEntries, data.log);
+$: latest = logRows[0];
+$: latestWhen = latest?.createdAt ? relativeTime(latest.createdAt, now) : "";
+$: latestWhenLong = latest?.createdAt
+	? relativeTime(latest.createdAt, now, true)
+	: "";
 </script>
 
 <svelte:head>
@@ -298,6 +318,31 @@ const pointsText = (points: number) =>
 		{/each}
 	</ol>
 
+	<button
+		type="button"
+		class="mt-4 flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-2 text-left"
+		aria-label={latest
+			? `Score log, latest: ${latest.name} scored ${Math.abs(latest.points)} point${Math.abs(latest.points) === 1 ? "" : "s"}${latest.points < 0 ? " less" : ""}${latest.saving ? ", saving" : latestWhenLong ? `, ${latestWhenLong}` : ""}`
+			: "Score log, no scores yet"}
+		aria-haspopup="dialog"
+		on:click={() => (logOpen = true)}
+	>
+		{#if latest}
+			<MeepleDot color={latest.color} label={latest.name[0]} size={28} />
+			<span class="min-w-0 flex-1 truncate font-semibold">
+				{latest.name}
+				scored
+				<span class="font-display font-bold">{pointsText(latest.points)}</span>
+			</span>
+			<span class="text-sm font-semibold text-muted">
+				{latest.saving ? "Saving…" : latestWhen}
+			</span>
+		{:else}
+			<span class="flex-1 font-semibold text-muted">No scores yet</span>
+		{/if}
+		<ChevronUpIcon size="20" class="shrink-0 text-muted" />
+	</button>
+
 	<div class="mt-auto pt-8">
 		{#if confirmingFinish}
 			<div
@@ -346,6 +391,15 @@ const pointsText = (points: number) =>
 			</Button>
 		{/if}
 	</div>
+
+	{#if logOpen}
+		<ScoreLogSheet
+			rows={logRows}
+			{now}
+			removalDisabled={offline || unconfirmed}
+			on:close={() => (logOpen = false)}
+		/>
+	{/if}
 
 	{#if keypadPlayer}
 		<KeypadSheet

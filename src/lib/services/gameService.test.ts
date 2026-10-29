@@ -4,6 +4,7 @@ import type { GameMessage } from "#lib/gameMessages.js";
 import {
 	createGameService,
 	type Game,
+	type GameDetail,
 	type GameEntry,
 	type GamePlayer,
 	type GameRecord,
@@ -38,6 +39,7 @@ function createMemoryRepository() {
 	const record = (game: Game): GameRecord => ({
 		game,
 		eventCount: events.filter((e) => e.gameId === game.id).length,
+		lastEventId: events.filter((e) => e.gameId === game.id).at(-1)?.id ?? null,
 		players: (members.get(game.id) ?? []).map(
 			({ playerId, color }): GamePlayer => ({
 				playerId,
@@ -92,6 +94,32 @@ function createMemoryRepository() {
 			const event = { id: nextEventId++, gameId, playerId, points };
 			events.push(event);
 			return { id: event.id, playerId, points };
+		},
+		async listScoreEvents(gameId) {
+			const own = events.filter((e) => e.gameId === gameId);
+			return own
+				.map((event) => ({
+					id: event.id,
+					playerId: event.playerId,
+					points: event.points,
+					createdAt: new Date(2026, 0, 1, 12, 0, event.id).toISOString(),
+					runningTotal: own
+						.filter((e) => e.playerId === event.playerId && e.id <= event.id)
+						.reduce((sum, e) => sum + e.points, 0),
+				}))
+				.reverse();
+		},
+		async deleteScoreEvent(gameId, eventId) {
+			const index = events.findIndex(
+				(e) => e.id === eventId && e.gameId === gameId,
+			);
+			if (index === -1) return undefined;
+			const [removed] = events.splice(index, 1);
+			return {
+				id: removed.id,
+				playerId: removed.playerId,
+				points: removed.points,
+			};
 		},
 		async deleteLatestScoreEvent(gameId) {
 			const index = events.map((e) => e.gameId).lastIndexOf(gameId);
@@ -470,8 +498,14 @@ describe("live update notifications", () => {
 		await service.addScore(id, a, 3);
 		await service.addScore(id, a, 2);
 		expect(published).toEqual([
-			[id, { type: "changed", eventCount: 1, status: "active" }],
-			[id, { type: "changed", eventCount: 2, status: "active" }],
+			[
+				id,
+				{ type: "changed", eventCount: 1, lastEventId: 1, status: "active" },
+			],
+			[
+				id,
+				{ type: "changed", eventCount: 2, lastEventId: 2, status: "active" },
+			],
 		]);
 	});
 
@@ -484,8 +518,19 @@ describe("live update notifications", () => {
 		await service.finish(id);
 
 		expect(published).toEqual([
-			[id, { type: "changed", eventCount: 0, status: "active" }],
-			[id, { type: "changed", eventCount: 0, status: "finished" }],
+			[
+				id,
+				{ type: "changed", eventCount: 0, lastEventId: null, status: "active" },
+			],
+			[
+				id,
+				{
+					type: "changed",
+					eventCount: 0,
+					lastEventId: null,
+					status: "finished",
+				},
+			],
 		]);
 	});
 
@@ -535,5 +580,119 @@ describe("live update notifications", () => {
 		if (!created.game) throw new Error("setup failed");
 
 		expect(await service.addScore(created.game.id, a, 2)).toEqual({});
+	});
+});
+
+describe("score log", () => {
+	async function started() {
+		const memory = createMemoryRepository();
+		const published: [string, GameMessage][] = [];
+		const service = createGameService(memory.repository, {
+			publish: (gameId, message) => published.push([gameId, message]),
+		});
+		const [a, b] = ["Ada", "Ben"].map((name) => memory.addPlayer(name));
+		const created = await service.create([
+			{ playerId: a, color: "red" },
+			{ playerId: b, color: "blue" },
+		]);
+		const id = created.game?.id ?? "";
+		return { service, published, id, a, b };
+	}
+
+	it("lists entries newest first with each player's running total", async () => {
+		const { service, id, a, b } = await started();
+		await service.addScore(id, a, 5);
+		await service.addScore(id, b, 3);
+		await service.addScore(id, a, -2);
+		await service.addScore(id, b, 4);
+		await service.addScore(id, a, 8);
+
+		const detail = await service.get(id);
+		const log = await service.log(detail as GameDetail);
+
+		expect(log.map((e) => [e.name, e.color, e.points, e.runningTotal])).toEqual(
+			[
+				["Ada", "red", 8, 11],
+				["Ben", "blue", 4, 7],
+				["Ada", "red", -2, 3],
+				["Ben", "blue", 3, 3],
+				["Ada", "red", 5, 5],
+			],
+		);
+	});
+
+	it("removes a middle entry and the totals follow", async () => {
+		const { service, id, a } = await started();
+		await service.addScore(id, a, 5);
+		await service.addScore(id, a, 3);
+		await service.addScore(id, a, 1);
+		const [, middle] = await service.log((await service.get(id)) as GameDetail);
+
+		expect(await service.removeEntry(id, middle.id)).toEqual({});
+
+		const detail = (await service.get(id)) as GameDetail;
+		expect(detail.players.find((p) => p.playerId === a)?.score).toBe(6);
+		expect((await service.log(detail)).map((e) => e.runningTotal)).toEqual([
+			6, 5,
+		]);
+	});
+
+	it("rejects unknown, repeated, other-game and finished removals", async () => {
+		const { service, published, id, a } = await started();
+		await service.addScore(id, a, 5);
+		const [entry] = await service.log((await service.get(id)) as GameDetail);
+		published.length = 0;
+
+		expect((await service.removeEntry(id, 9999)).error).toMatch(
+			/already removed/,
+		);
+		expect((await service.removeEntry(id, Number.NaN)).error).toMatch(
+			/already removed/,
+		);
+		expect((await service.removeEntry("other-game", entry.id)).error).toBe(
+			"Game not found.",
+		);
+		await service.finish(id);
+		published.length = 0;
+		expect((await service.removeEntry(id, entry.id)).error).toBe(
+			"This game is finished.",
+		);
+		expect(published).toEqual([]);
+	});
+
+	it("never removes an entry through another game's id", async () => {
+		const { service, id, a, b } = await started();
+		await service.addScore(id, a, 5);
+		const [entry] = await service.log((await service.get(id)) as GameDetail);
+		await service.finish(id);
+		const next = await service.create([
+			{ playerId: a, color: "red" },
+			{ playerId: b, color: "blue" },
+		]);
+		const nextId = next.game?.id ?? "";
+
+		expect((await service.removeEntry(nextId, entry.id)).error).toMatch(
+			/already removed/,
+		);
+		expect((await service.get(id))?.eventCount).toBe(1);
+	});
+
+	it("announces a removal, and a remove-then-add keeps changing the message", async () => {
+		const { service, published, id, a } = await started();
+		await service.addScore(id, a, 5);
+		await service.addScore(id, a, 3);
+		const [latest] = await service.log((await service.get(id)) as GameDetail);
+		published.length = 0;
+
+		await service.removeEntry(id, latest.id);
+		await service.addScore(id, a, 4);
+
+		const [afterRemove, afterAdd] = published.map(([, m]) => m);
+		// Same count of two, but a different last event: viewers must reload.
+		expect(afterAdd).toMatchObject({ eventCount: 2 });
+		expect(afterRemove).toMatchObject({ eventCount: 1 });
+		expect((afterAdd as { lastEventId: number }).lastEventId).toBeGreaterThan(
+			latest.id,
+		);
 	});
 });

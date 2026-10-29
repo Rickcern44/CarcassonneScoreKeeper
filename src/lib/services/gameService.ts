@@ -42,6 +42,11 @@ export interface GameRecord {
 	players: GamePlayer[];
 	/** Number of score events, so the UI knows whether Undo has anything to do. */
 	eventCount: number;
+	/**
+	 * The highest score event id, or null with none. Ids never repeat, so this
+	 * changes on every add, undo and removal even when eventCount stays the same.
+	 */
+	lastEventId: number | null;
 }
 
 export interface RankedPlayer extends GamePlayer {
@@ -57,6 +62,19 @@ export interface GameDetail {
 	game: Game;
 	players: RankedPlayer[];
 	eventCount: number;
+	lastEventId: number | null;
+}
+
+/** One scoring tap in the game's log, with that player's total after it. */
+export interface ScoreLogRow extends ScoreEvent {
+	createdAt: string;
+	runningTotal: number;
+}
+
+/** A log row with the player's name and colour attached for display. */
+export interface LogEntry extends ScoreLogRow {
+	name: string;
+	color: MeepleColor;
 }
 
 export interface PlayerStats {
@@ -94,6 +112,13 @@ export interface GameRepository {
 		playerId: string,
 		points: number,
 	): Promise<ScoreEvent>;
+	/** The game's events, newest first, with each player's running total. */
+	listScoreEvents(gameId: string): Promise<ScoreLogRow[]>;
+	/** Deletes one event of that game and returns it; undefined if it isn't there. */
+	deleteScoreEvent(
+		gameId: string,
+		eventId: number,
+	): Promise<ScoreEvent | undefined>;
 	/** Deletes and returns the game's latest event, if it has any. */
 	deleteLatestScoreEvent(gameId: string): Promise<ScoreEvent | undefined>;
 	/** Returns false unless the game exists and was active. */
@@ -106,8 +131,14 @@ function toDetail({
 	game,
 	players: gamePlayersList,
 	eventCount,
+	lastEventId,
 }: GameRecord): GameDetail {
-	return { game, players: rankPlayers(gamePlayersList), eventCount };
+	return {
+		game,
+		players: rankPlayers(gamePlayersList),
+		eventCount,
+		lastEventId,
+	};
 }
 
 /** The players ranked first; more than one means the game was tied. */
@@ -148,6 +179,7 @@ export function createGameService(
 			notifier.publish(gameId, {
 				type: "changed",
 				eventCount: record.eventCount,
+				lastEventId: record.lastEventId,
 				status: record.game.status,
 			});
 		} catch {
@@ -198,6 +230,37 @@ export function createGameService(
 
 		async listFinished(): Promise<GameDetail[]> {
 			return (await repository.listFinished()).map(toDetail);
+		},
+
+		/** The game's score log, newest first, with player names and colours. */
+		async log(detail: GameDetail): Promise<LogEntry[]> {
+			const rows = await repository.listScoreEvents(detail.game.id);
+			const byPlayer = new Map(detail.players.map((p) => [p.playerId, p]));
+			return rows.flatMap((row) => {
+				const player = byPlayer.get(row.playerId);
+				return player
+					? [{ ...row, name: player.name, color: player.color }]
+					: [];
+			});
+		},
+
+		/** Removes any one entry from an active game (Undo removes the latest). */
+		async removeEntry(
+			gameId: string,
+			eventId: number,
+		): Promise<GameActionResult> {
+			if (!Number.isSafeInteger(eventId) || eventId <= 0) {
+				return { error: "That entry was already removed." };
+			}
+			const record = await repository.get(gameId);
+			if (!record) return { error: "Game not found." };
+			if (record.game.status !== "active") {
+				return { error: "This game is finished." };
+			}
+			const removed = await repository.deleteScoreEvent(gameId, eventId);
+			if (!removed) return { error: "That entry was already removed." };
+			await announceChange(gameId);
+			return {};
 		},
 
 		/** Points are signed, so a correction is a negative amount. */
@@ -313,6 +376,7 @@ export function createDrizzleGameRepository(
 			.select({
 				gameId: scoreEvents.gameId,
 				count: sql<number>`count(*)::int`,
+				lastId: sql<number | null>`max(${scoreEvents.id})::float8`,
 			})
 			.from(scoreEvents)
 			.where(inArray(scoreEvents.gameId, gameIds))
@@ -324,6 +388,7 @@ export function createDrizzleGameRepository(
 				.filter((player) => player.gameId === row.id)
 				.map(({ gameId: _gameId, ...player }) => player),
 			eventCount: eventRows.find((e) => e.gameId === row.id)?.count ?? 0,
+			lastEventId: eventRows.find((e) => e.gameId === row.id)?.lastId ?? null,
 		}));
 	}
 
@@ -396,6 +461,32 @@ export function createDrizzleGameRepository(
 				.values({ gameId, playerId, points })
 				.returning();
 			return { id: row.id, playerId: row.playerId, points: row.points };
+		},
+		async listScoreEvents(gameId) {
+			if (!UUID.test(gameId)) return [];
+			const rows = await getDatabase()
+				.select({
+					id: scoreEvents.id,
+					playerId: scoreEvents.playerId,
+					points: scoreEvents.points,
+					createdAt: scoreEvents.createdAt,
+					runningTotal: sql<number>`(sum(${scoreEvents.points}) over (partition by ${scoreEvents.playerId} order by ${scoreEvents.id}))::int`,
+				})
+				.from(scoreEvents)
+				.where(eq(scoreEvents.gameId, gameId))
+				.orderBy(desc(scoreEvents.id));
+			return rows.map((row) => ({
+				...row,
+				createdAt: row.createdAt.toISOString(),
+			}));
+		},
+		async deleteScoreEvent(gameId, eventId) {
+			if (!UUID.test(gameId)) return undefined;
+			const [row] = await getDatabase()
+				.delete(scoreEvents)
+				.where(and(eq(scoreEvents.id, eventId), eq(scoreEvents.gameId, gameId)))
+				.returning();
+			return row && { id: row.id, playerId: row.playerId, points: row.points };
 		},
 		async deleteLatestScoreEvent(gameId) {
 			const [latest] = await getDatabase()

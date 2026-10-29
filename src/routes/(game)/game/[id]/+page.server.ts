@@ -7,7 +7,10 @@ export const load = (async ({ params, depends }) => {
 	depends("app:game");
 	const detail = await gameService.get(params.id);
 	if (!detail) throw error(404, "Game not found");
-	return { detail };
+	// The log is for playing; finished games show results only.
+	const log =
+		detail.game.status === "active" ? await gameService.log(detail) : [];
+	return { detail, log };
 }) satisfies PageServerLoad;
 
 export const actions = {
@@ -20,6 +23,15 @@ export const actions = {
 			params.id,
 			typeof playerId === "string" ? playerId : "",
 			points,
+		);
+		if (result.error) return fail(400, { error: result.error });
+		return { ok: true };
+	},
+	removeEntry: async ({ params, request }) => {
+		const formData = await request.formData();
+		const result = await gameService.removeEntry(
+			params.id,
+			Number(formData.get("eventId")),
 		);
 		if (result.error) return fail(400, { error: result.error });
 		return { ok: true };
