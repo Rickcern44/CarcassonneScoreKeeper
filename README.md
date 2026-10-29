@@ -57,6 +57,14 @@ Carc Keeper is a PWA: it has a web manifest (`static/manifest.webmanifest`, icon
 
 SvelteKit only registers the worker in production builds, not `vite dev`. To try it, run `npm run build && npm run preview`, open the app, and use DevTools > Application (Service Workers, Cache Storage, Manifest). To reset it there, choose Unregister and Clear site data.
 
+### Live scoring
+
+A game open on several devices updates everywhere within about a second. The server sends a small "changed" message over Server-Sent Events (`/game/<id>/events`, served by `src/routes/(game)/game/[id]/events/+server.ts`) after each score, undo, finish, discard or rematch, and each screen reloads the game through its normal load. A heartbeat comment every 20 seconds keeps idle connections open behind Fly's proxy, and a device that was asleep or offline reloads when it reconnects or the tab is shown again. The stream is closed while the device is offline.
+
+On the scoring device, tapped points (quick buttons and the keypad) show at once and roll back with an error if the save fails; undo, finish, discard and rematch wait for the server. Anyone logged in can still score; a single-scorer role is not built yet.
+
+**One-machine limit.** Messages are fanned out in memory (`src/lib/server/gameEvents.ts`), which works because the app runs on one Fly machine (`--ha=false`). With a second machine, viewers connected to the other one would miss changes. Moving to more machines needs Postgres `LISTEN/NOTIFY` over a direct (non-pooled) Neon connection, or a hosted pub/sub, instead of that module.
+
 ## Database
 
 Data is stored in Postgres through [Drizzle ORM](https://orm.drizzle.team) with the `postgres` driver. Locally, Aspire runs Postgres in a container; production is planned to use a single Neon instance. Tables: `players`, `games`, `game_players` (a game's players and their meeple colors) and `score_events` (signed points; a player's score is the sum of their events, and Undo deletes the latest one).

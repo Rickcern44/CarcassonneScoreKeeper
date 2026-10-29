@@ -2,11 +2,13 @@
 import { createEventDispatcher, onMount } from "svelte";
 import { online } from "svelte/reactivity/window";
 import { DeleteIcon } from "svelte-feather-icons";
-import { enhance } from "$app/forms";
+import { enhance, type SubmitFunction } from "$app/forms";
 
 export let playerId: string;
 export let name: string;
 export let score: number;
+/** Saves the points; the sheet closes at once, the score updates optimistically. */
+export let onScore: SubmitFunction;
 
 $: offline = !online.current;
 
@@ -166,11 +168,10 @@ const keyClass =
 			method="POST"
 			action="?/score"
 			class="mt-4"
-			use:enhance={() =>
-				async ({ result, update }) => {
-					await update();
-					if (result.type === "success") close();
-				}}
+			use:enhance={(input) => {
+				close();
+				return onScore(input);
+			}}
 		>
 			<input type="hidden" name="playerId" value={playerId}>
 			<input type="hidden" name="points" value={signed}>

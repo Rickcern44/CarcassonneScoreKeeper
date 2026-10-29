@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import type { GameMessage } from "#lib/gameMessages.js";
 import { MEEPLE_COLORS, type MeepleColor } from "#lib/meeple.js";
 import { getDb } from "#lib/server/db/index.js";
 import {
@@ -7,9 +8,16 @@ import {
 	players,
 	scoreEvents,
 } from "#lib/server/db/schema.js";
-import { MAX_PLAYERS, MIN_PLAYERS } from "./gameRules";
+import { gameEvents } from "#lib/server/gameEvents.js";
+import { MAX_PLAYERS, MIN_PLAYERS, rankPlayers } from "./gameRules";
 
-export { MAX_PLAYERS, MEEPLE_COLORS, type MeepleColor, MIN_PLAYERS };
+export {
+	MAX_PLAYERS,
+	MEEPLE_COLORS,
+	type MeepleColor,
+	MIN_PLAYERS,
+	rankPlayers,
+};
 
 export interface Game {
 	id: string;
@@ -94,17 +102,6 @@ export interface GameRepository {
 	discard(id: string): Promise<boolean>;
 }
 
-/** Orders by score (highest first), then name, and assigns tied ranks. */
-export function rankPlayers(gamePlayersList: GamePlayer[]): RankedPlayer[] {
-	const sorted = [...gamePlayersList].sort(
-		(a, b) => b.score - a.score || a.name.localeCompare(b.name),
-	);
-	return sorted.map((player) => ({
-		...player,
-		rank: sorted.findIndex((other) => other.score === player.score) + 1,
-	}));
-}
-
 function toDetail({
 	game,
 	players: gamePlayersList,
@@ -132,7 +129,32 @@ export function playerStats(finished: GameDetail[]): Map<string, PlayerStats> {
 	return stats;
 }
 
-export function createGameService(repository: GameRepository) {
+/** Told after each successful change, so open game screens can refresh. */
+export interface GameNotifier {
+	publish(gameId: string, message: GameMessage): void;
+}
+
+const silent: GameNotifier = { publish() {} };
+
+export function createGameService(
+	repository: GameRepository,
+	notifier: GameNotifier = silent,
+) {
+	/** Tells viewers the game changed; never fails the change that caused it. */
+	async function announceChange(gameId: string) {
+		try {
+			const record = await repository.get(gameId);
+			if (!record) return;
+			notifier.publish(gameId, {
+				type: "changed",
+				eventCount: record.eventCount,
+				status: record.game.status,
+			});
+		} catch {
+			// Viewers also resync on reconnect and when the tab is shown again.
+		}
+	}
+
 	const service = {
 		async create(entries: GameEntry[]): Promise<CreateGameResult> {
 			if (entries.length < MIN_PLAYERS || entries.length > MAX_PLAYERS) {
@@ -197,6 +219,7 @@ export function createGameService(repository: GameRepository) {
 			}
 
 			await repository.addScoreEvent(gameId, playerId, points);
+			await announceChange(gameId);
 			return {};
 		},
 
@@ -208,14 +231,18 @@ export function createGameService(repository: GameRepository) {
 			}
 
 			const removed = await repository.deleteLatestScoreEvent(gameId);
-			return removed ? {} : { error: "Nothing to undo." };
+			if (!removed) return { error: "Nothing to undo." };
+			await announceChange(gameId);
+			return {};
 		},
 
 		async finish(gameId: string): Promise<GameActionResult> {
 			const record = await repository.get(gameId);
 			if (!record) return { error: "Game not found." };
 			const finished = await repository.finish(gameId);
-			return finished ? {} : { error: "This game is already finished." };
+			if (!finished) return { error: "This game is already finished." };
+			await announceChange(gameId);
+			return {};
 		},
 
 		/** Removes an active game entirely, e.g. one started by mistake. */
@@ -223,16 +250,22 @@ export function createGameService(repository: GameRepository) {
 			const record = await repository.get(gameId);
 			if (!record) return { error: "Game not found." };
 			const discarded = await repository.discard(gameId);
-			return discarded ? {} : { error: "Finished games can't be discarded." };
+			if (!discarded) return { error: "Finished games can't be discarded." };
+			notifier.publish(gameId, { type: "discarded" });
+			return {};
 		},
 
 		/** Starts a new game with the same players and colors. */
 		async rematch(gameId: string): Promise<CreateGameResult> {
 			const record = await repository.get(gameId);
 			if (!record) return { error: "Game not found." };
-			return service.create(
+			const result = await service.create(
 				record.players.map(({ playerId, color }) => ({ playerId, color })),
 			);
+			if (result.game) {
+				notifier.publish(gameId, { type: "rematch", gameId: result.game.id });
+			}
+			return result;
 		},
 	};
 	return service;
@@ -400,4 +433,7 @@ export function createDrizzleGameRepository(
 	};
 }
 
-export const gameService = createGameService(createDrizzleGameRepository());
+export const gameService = createGameService(
+	createDrizzleGameRepository(),
+	gameEvents,
+);

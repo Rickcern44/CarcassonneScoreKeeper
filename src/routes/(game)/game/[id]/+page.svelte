@@ -3,8 +3,16 @@ import { onDestroy } from "svelte";
 import { flip } from "svelte/animate";
 import { online } from "svelte/reactivity/window";
 import { RotateCcwIcon } from "svelte-feather-icons";
+import { isNewChange, parseGameMessage } from "#lib/gameMessages.js";
 import { meepleBg, meepleText } from "#lib/meeple.js";
-import { enhance } from "$app/forms";
+import {
+	createPendingScores,
+	type PendingScore,
+	withPending,
+} from "#lib/pendingScores.js";
+import { browser } from "$app/env";
+import { enhance, type SubmitFunction } from "$app/forms";
+import { goto, invalidate } from "$app/navigation";
 import Button from "../../../../components/Button.svelte";
 import GameResults from "../../../../components/GameResults.svelte";
 import KeypadSheet from "../../../../components/KeypadSheet.svelte";
@@ -50,18 +58,124 @@ function scheduleReorder(current: PageData["detail"]) {
 	}
 }
 
-onDestroy(() => clearTimeout(reorderTimer));
+// Taps show at once. Each is added here and stays until the server has saved it
+// and a reload that followed has confirmed it (see src/lib/pendingScores.ts).
+let pendingEntries: readonly PendingScore[] = [];
+const pending = createPendingScores((entries) => {
+	pendingEntries = entries;
+});
+let scoreError = "";
 
-$: detail = data.detail;
+const reload = () => invalidate("app:game");
+
+let reconciling = false;
+async function reconcile() {
+	if (reconciling) return;
+	reconciling = true;
+	try {
+		for (let ids = pending.settled(); ids.length > 0; ids = pending.settled()) {
+			await reload();
+			pending.drop(ids);
+		}
+	} finally {
+		reconciling = false;
+	}
+}
+
+const saveScore: SubmitFunction = ({ formData }) => {
+	const playerId = String(formData.get("playerId"));
+	const id = pending.add(playerId, Number(formData.get("points")));
+	scoreError = "";
+	return async ({ result }) => {
+		const ok = result.type === "success";
+		pending.finish(id, ok);
+		if (!ok) {
+			scoreError =
+				result.type === "failure" && typeof result.data?.error === "string"
+					? result.data.error
+					: "Couldn't save that score. Try again.";
+			// A lost response may still have been saved, so resync.
+			if (!pending.active) await reload();
+		}
+		await reconcile();
+	};
+};
+
+// Live updates: the server says when this game changed, then the game reloads.
+let source: EventSource | undefined;
+let missedUpdates = false;
+
+function sync() {
+	// Our own taps reload when they settle; a reload now could count them twice.
+	if (!pending.active) reload();
+}
+
+function disconnect() {
+	if (!source) return;
+	source.close();
+	source = undefined;
+	missedUpdates = true;
+}
+
+function connect(gameId: string) {
+	disconnect();
+	source = new EventSource(`/game/${gameId}/events`);
+	// EventSource retries by itself; whatever it missed is fetched when it is back.
+	source.onerror = () => {
+		missedUpdates = true;
+	};
+	source.onopen = () => {
+		if (missedUpdates) {
+			missedUpdates = false;
+			sync();
+		}
+	};
+	source.onmessage = (event) => {
+		const message = parseGameMessage(event.data);
+		if (!message) return;
+		if (message.type === "discarded") goto("/home?notice=discarded");
+		else if (message.type === "rematch") goto(`/game/${message.gameId}`);
+		else if (isNewChange(message, serverView)) sync();
+	};
+}
+
+$: gameId = data.detail.game.id;
+// A rematch reuses this page for a new game, so start it with a clean screen.
+let uiGameId = "";
+$: if (gameId !== uiGameId) {
+	uiGameId = gameId;
+	selectedId = null;
+	keypadFor = null;
+	confirmingFinish = false;
+	scoreError = "";
+}
+$: serverView = {
+	eventCount: data.detail.eventCount,
+	status: data.detail.game.status,
+};
+// Closed while offline (see the offline banner); resyncs when it is reopened.
+$: if (browser) {
+	if (online.current) connect(gameId);
+	else disconnect();
+}
+
+onDestroy(() => {
+	clearTimeout(reorderTimer);
+	source?.close();
+});
+
+$: detail = withPending(data.detail, pendingEntries);
 $: scheduleReorder(detail);
 $: shown = order.flatMap((id) => {
 	const player = detail.players.find((p) => p.playerId === id);
 	return player ? [{ ...player, rank: ranks[id] ?? player.rank }] : [];
 });
+// Undo and Finish wait until our own taps are saved, so they act on what is shown.
+$: unconfirmed = pendingEntries.length > 0;
 $: active = detail.game.status === "active";
 // Saved pages can be read offline, but a form posted with no network would just fail.
 $: offline = !online.current;
-$: keypadPlayer = detail.players.find((p) => p.playerId === keypadFor);
+$: keypadPlayer = shown.find((p) => p.playerId === keypadFor);
 
 const pointsLabel = (points: number, name: string) =>
 	points < 0
@@ -75,6 +189,10 @@ const pointsText = (points: number) =>
 	<title>{active ? "Scoreboard" : "Game over"}</title>
 </svelte:head>
 
+<svelte:document
+	on:visibilitychange={() => document.visibilityState === "visible" && sync()}
+/>
+
 {#if !active}
 	<GameResults {detail} error={form?.error} />
 {:else}
@@ -82,7 +200,7 @@ const pointsText = (points: number) =>
 		<form method="POST" action="?/undo" use:enhance>
 			<button
 				type="submit"
-				disabled={offline || detail.eventCount === 0}
+				disabled={offline || data.detail.eventCount === 0 || unconfirmed}
 				class="flex min-h-[44px] items-center gap-2 rounded-2xl border-2 border-line bg-surface px-4 font-display text-lg font-semibold text-muted enabled:border-ink enabled:text-ink disabled:opacity-60"
 			>
 				<RotateCcwIcon size="20" />
@@ -93,8 +211,10 @@ const pointsText = (points: number) =>
 
 	<p class="mt-4 font-semibold text-muted">Tap a player to add points.</p>
 
-	{#if form?.error}
-		<p class="mt-2 font-bold text-meeple-red" role="alert">{form.error}</p>
+	{#if scoreError || form?.error}
+		<p class="mt-2 font-bold text-meeple-red" role="alert">
+			{scoreError || form?.error}
+		</p>
 	{/if}
 
 	<ol class="mt-4 flex flex-col gap-3">
@@ -135,7 +255,7 @@ const pointsText = (points: number) =>
 					<form
 						method="POST"
 						action="?/score"
-						use:enhance
+						use:enhance={saveScore}
 						class="grid grid-cols-5 gap-2 px-4 pb-4"
 					>
 						<input type="hidden" name="playerId" value={player.playerId}>
@@ -193,7 +313,9 @@ const pointsText = (points: number) =>
 				</p>
 				<div class="mt-4 flex flex-col gap-3">
 					<form method="POST" action="?/finish" use:enhance>
-						<Button type="submit" block disabled={offline}>Finish game</Button>
+						<Button type="submit" block disabled={offline || unconfirmed}>
+							Finish game
+						</Button>
 					</form>
 					<Button
 						variant="secondary"
@@ -217,7 +339,7 @@ const pointsText = (points: number) =>
 			<Button
 				variant="secondary"
 				block
-				disabled={offline}
+				disabled={offline || unconfirmed}
 				on:click={() => (confirmingFinish = true)}
 			>
 				Finish game
@@ -230,6 +352,7 @@ const pointsText = (points: number) =>
 			playerId={keypadPlayer.playerId}
 			name={keypadPlayer.name}
 			score={keypadPlayer.score}
+			onScore={saveScore}
 			on:close={() => (keypadFor = null)}
 		/>
 	{/if}

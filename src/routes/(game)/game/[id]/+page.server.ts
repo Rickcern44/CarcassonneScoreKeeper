@@ -2,7 +2,9 @@ import { error, fail, redirect } from "@sveltejs/kit";
 import { gameService } from "#lib/services/gameService.js";
 import type { Actions, PageServerLoad } from "./$types";
 
-export const load = (async ({ params }) => {
+export const load = (async ({ params, depends }) => {
+	// Invalidated when live updates say the game changed.
+	depends("app:game");
 	const detail = await gameService.get(params.id);
 	if (!detail) throw error(404, "Game not found");
 	return { detail };
