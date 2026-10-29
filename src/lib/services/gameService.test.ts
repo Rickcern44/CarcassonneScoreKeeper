@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import type { GameMessage } from "#lib/gameMessages.js";
 import {
 	createGameService,
 	type Game,
@@ -440,5 +441,99 @@ describe("winners and stats", () => {
 		expect(stats.get(ids[0])).toEqual({ gamesPlayed: 2, wins: 2 });
 		expect(stats.get(ids[1])).toEqual({ gamesPlayed: 2, wins: 1 });
 		expect(stats.get(ids[2])).toEqual({ gamesPlayed: 2, wins: 0 });
+	});
+});
+
+describe("live update notifications", () => {
+	function setupNotified() {
+		const memory = createMemoryRepository();
+		const published: [string, GameMessage][] = [];
+		const service = createGameService(memory.repository, {
+			publish: (gameId, message) => published.push([gameId, message]),
+		});
+		const [a, b] = ["Ada", "Ben"].map((name) => memory.addPlayer(name));
+		return { service, published, a, b };
+	}
+
+	async function start() {
+		const ctx = setupNotified();
+		const created = await ctx.service.create([
+			{ playerId: ctx.a, color: "red" },
+			{ playerId: ctx.b, color: "blue" },
+		]);
+		if (!created.game) throw new Error("setup failed");
+		return { ...ctx, id: created.game.id };
+	}
+
+	it("announces a new score with the event count", async () => {
+		const { service, published, id, a } = await start();
+		await service.addScore(id, a, 3);
+		await service.addScore(id, a, 2);
+		expect(published).toEqual([
+			[id, { type: "changed", eventCount: 1, status: "active" }],
+			[id, { type: "changed", eventCount: 2, status: "active" }],
+		]);
+	});
+
+	it("announces undo and finish", async () => {
+		const { service, published, id, a } = await start();
+		await service.addScore(id, a, 3);
+		published.length = 0;
+
+		await service.undo(id);
+		await service.finish(id);
+
+		expect(published).toEqual([
+			[id, { type: "changed", eventCount: 0, status: "active" }],
+			[id, { type: "changed", eventCount: 0, status: "finished" }],
+		]);
+	});
+
+	it("announces discard, and rematch with the new game id", async () => {
+		const first = await start();
+		await first.service.discard(first.id);
+		expect(first.published.at(-1)).toEqual([first.id, { type: "discarded" }]);
+
+		const second = await start();
+		await second.service.finish(second.id);
+		const rematch = await second.service.rematch(second.id);
+		expect(second.published.at(-1)).toEqual([
+			second.id,
+			{ type: "rematch", gameId: rematch.game?.id },
+		]);
+	});
+
+	it("announces nothing when a change is rejected", async () => {
+		const { service, published, id, a } = await start();
+		await service.addScore(id, a, 0);
+		await service.addScore(id, "stranger", 1);
+		await service.undo(id); // nothing to undo
+		await service.finish(id);
+		published.length = 0;
+
+		await service.addScore(id, a, 1); // finished
+		await service.undo(id);
+		await service.finish(id);
+		await service.discard(id);
+		await service.rematch("missing");
+
+		expect(published).toEqual([]);
+	});
+
+	it("still succeeds when the notifier throws", async () => {
+		const memory = createMemoryRepository();
+		const service = createGameService(memory.repository, {
+			publish() {
+				throw new Error("boom");
+			},
+		});
+		const [a, b] = ["Ada", "Ben"].map((name) => memory.addPlayer(name));
+		const created = await service.create([
+			{ playerId: a, color: "red" },
+			{ playerId: b, color: "blue" },
+		]);
+		if (!created.game) throw new Error("setup failed");
+
+		expect(await service.addScore(created.game.id, a, 2)).toEqual({});
 	});
 });

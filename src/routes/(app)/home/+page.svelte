@@ -2,6 +2,7 @@
 import { PlusIcon } from "svelte-feather-icons";
 import { formatGameDate, joinNames } from "#lib/format.js";
 import { meepleBg, meepleText } from "#lib/meeple.js";
+import { page } from "$app/state";
 import Button from "../../../components/Button.svelte";
 import Meeple from "../../../components/Meeple.svelte";
 import MeepleDot from "../../../components/MeepleDot.svelte";
@@ -22,6 +23,12 @@ export let data: PageData;
 	</span>
 	<h1 class="font-display text-4xl font-bold">Carcassonne</h1>
 </div>
+
+{#if page.url.searchParams.get("notice") === "discarded"}
+	<p class="mt-4 font-bold text-muted" role="status">
+		That game was discarded.
+	</p>
+{/if}
 
 {#if data.active}
 	<section
