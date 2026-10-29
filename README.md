@@ -116,6 +116,18 @@ Production rebuilds the same commit from source rather than reusing the staging 
 
 Because the database is migrated before the new code goes live (and the previous version keeps serving until then), keep migrations backward compatible: add columns and tables; do not drop or rename in the same release as the code that stops using them. If a deploy fails after its migration ran, the database stays ahead of the running code, which is safe for additive migrations.
 
+### Environments and the staging look
+
+The app knows which environment it runs in so you cannot mistake staging for production:
+
+| Environment | How it is set                                                                     | What you see                                                                                                                                     |
+| ----------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Local       | automatic whenever the Vite dev server runs (`npm run dev`, Aspire)               | a purple "LOCAL: development server" banner and `[Local]` tab titles                                                                             |
+| Staging     | `APP_ENV=staging`, set by the staging deploy (`environment: staging` in `cd.yml`) | an orange "STAGING" banner on every page (login included), `[Staging]` tab titles, and an installed app named "Carc Staging" with an orange icon |
+| Production  | anything else, including unset or a misspelled value                              | no banner; unchanged name, icon and colours                                                                                                      |
+
+`APP_ENV` is not a secret. The deploy action passes it with `flyctl deploy --env`, and its smoke test fails the deploy if staging lacks the banner or production shows one. Setting `APP_ENV=development` forces the Local look outside the dev server (for example under `npm run preview`). Staging and production already have different origins, so both install side by side. iOS saves the icon when you add the app to the home screen, so remove and re-add an existing staging install to get the new icon. The staging icons are `static/*staging*.png` and are committed (the meeple on orange with an "STG" mark).
+
 ### One-time setup
 
 Infrastructure is not managed as code yet, so these are done by hand once:

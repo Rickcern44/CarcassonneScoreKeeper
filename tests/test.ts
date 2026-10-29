@@ -36,6 +36,49 @@ test("the right password redirects to home", async ({ page }) => {
 	await expect(page).toHaveURL("/home");
 });
 
+test.describe("environment look", () => {
+	test("the default (production) look has no banner, the original title and manifest", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await expect(page.locator("[data-env-banner]")).toHaveCount(0);
+		await expect(page).toHaveTitle("Login");
+		await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
+			"href",
+			/\/manifest\.webmanifest$/,
+		);
+	});
+
+	for (const file of ["manifest.webmanifest", "manifest.staging.webmanifest"]) {
+		test(`${file} parses and every icon it lists is served`, async ({
+			request,
+		}) => {
+			const response = await request.get(`/${file}`, { maxRedirects: 0 });
+			expect(response.status()).toBe(200);
+			const manifest = await response.json();
+			expect(manifest.icons.length).toBeGreaterThan(0);
+			for (const icon of manifest.icons) {
+				const res = await request.get(icon.src, { maxRedirects: 0 });
+				expect(res.status(), icon.src).toBe(200);
+			}
+		});
+	}
+
+	test("the staging manifest has its own name and colour", async ({
+		request,
+	}) => {
+		const manifest = await (
+			await request.get("/manifest.staging.webmanifest")
+		).json();
+		expect(manifest).toMatchObject({
+			name: "Carc Keeper (Staging)",
+			short_name: "Carc Staging",
+			theme_color: "#f97316",
+			start_url: "/home",
+		});
+	});
+});
+
 test.describe("progressive web app", () => {
 	test("the manifest is public and describes an installable app", async ({
 		request,

@@ -23,6 +23,7 @@ This is a source review snapshot, not a verified runtime or security audit. Sugg
 - **A game can be discarded** while active (deletes its scores). Finished games cannot be edited or discarded.
 - **Theme:** follows the device by default, with a System / Light / Dark override remembered on the device (`localStorage`).
 - **Installable, with read-only offline viewing (#44).** The app has a web manifest and a service worker. Pages already viewed (home, history, players, a game) stay readable offline, with a banner and scoring disabled; a page never viewed shows an offline page. Saved pages are cleared on logout. **Offline scoring (queued changes synced later) is deferred** to a later issue, because it needs a client-side store and a sync/conflict design that interacts with real-time scoring (#42).
+- **Environment look (#49).** The app derives `development` (Vite dev server), `staging` (`APP_ENV=staging`) or `production` (everything else, the safe default). Staging and local show a coloured banner and a title prefix; staging also has its own manifest and orange icons so it installs as a separate, distinct app. The deploy smoke test checks the banner. Production is unchanged.
 
 ## What exists
 

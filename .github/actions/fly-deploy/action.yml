@@ -19,6 +19,11 @@ inputs:
   database-url:
     description: Runtime Postgres connection string for the app (DATABASE_URL)
     required: true
+  environment:
+    description: >
+      Which environment this is, passed to the app as APP_ENV and checked by the
+      smoke test: "staging" shows the staging banner, "production" must not.
+    default: production
 
 runs:
   using: composite
@@ -57,17 +62,34 @@ runs:
       env:
         FLY_API_TOKEN: ${{ inputs.token }}
         APP: ${{ inputs.app }}
-      run: flyctl deploy --remote-only --ha=false --app "$APP"
+        APP_ENV: ${{ inputs.environment }}
+      run: |
+        case "$APP_ENV" in
+          staging|production) ;;
+          *) echo "environment must be staging or production, got: $APP_ENV" >&2; exit 1 ;;
+        esac
+        flyctl deploy --remote-only --ha=false --app "$APP" --env "APP_ENV=$APP_ENV"
 
     - name: Smoke test
       shell: bash
       env:
         APP: ${{ inputs.app }}
+        APP_ENV: ${{ inputs.environment }}
       run: |
         url="https://$APP.fly.dev/"
         for attempt in $(seq 1 10); do
-          if curl -fsS "$url" | grep -q "Table password"; then
+          page="$(curl -fsS "$url" || true)"
+          if grep -q "Table password" <<< "$page"; then
             echo "OK: $url is serving the login page."
+            # A misconfigured APP_ENV must fail the deploy, not confuse a tester.
+            if [ "$APP_ENV" = "staging" ]; then
+              grep -q 'data-env-banner="staging"' <<< "$page" || {
+                echo "Staging is missing its environment banner." >&2; exit 1; }
+            else
+              ! grep -q 'data-env-banner' <<< "$page" || {
+                echo "Production is showing an environment banner." >&2; exit 1; }
+            fi
+            echo "OK: environment banner matches '$APP_ENV'."
             exit 0
           fi
           echo "Attempt $attempt failed; retrying in 6s..."
