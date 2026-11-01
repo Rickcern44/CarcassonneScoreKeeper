@@ -55,6 +55,12 @@ export async function add(page: Page, name: string, points: number) {
 	await button.click();
 }
 
+/** Goes offline and waits until the page has noticed (banner showing). */
+export async function goOffline(page: Page) {
+	await page.context().setOffline(true);
+	await expect(page.getByRole("status")).toContainText("Offline");
+}
+
 export async function finish(page: Page) {
 	await page.getByRole("button", { name: "Finish game" }).click();
 	await page.getByRole("button", { name: "Finish game" }).last().click();

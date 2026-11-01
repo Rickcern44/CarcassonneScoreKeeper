@@ -1,5 +1,14 @@
 import type { Browser, Page } from "@playwright/test";
-import { add, card, expect, finish, newPage, startGame, test } from "./helpers";
+import {
+	add,
+	card,
+	expect,
+	finish,
+	goOffline,
+	newPage,
+	startGame,
+	test,
+} from "./helpers";
 
 // Needs a migrated Postgres: see "End-to-end tests" in the README.
 // A clean-up after every test discards a game left active by a failure.
@@ -91,12 +100,6 @@ async function twoDevices(browser: Browser) {
 	await b.goto(a.url());
 	await expect(card(b, ann, 0)).toBeVisible();
 	return { a, b, ann };
-}
-
-/** Goes offline and waits until the page has noticed (banner showing). */
-async function goOffline(page: Page) {
-	await page.context().setOffline(true);
-	await expect(page.getByRole("status")).toContainText("Offline");
 }
 
 const noErrorPage = (page: Page) =>

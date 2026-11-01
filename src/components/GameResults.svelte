@@ -1,7 +1,7 @@
 <script lang="ts">
-import { online } from "svelte/reactivity/window";
 import { joinNames } from "#lib/format.js";
 import { meepleBg, meepleText } from "#lib/meeple.js";
+import { isOnline } from "#lib/online.js";
 import type { GameDetail } from "#lib/services/gameService.js";
 import { enhance } from "$app/forms";
 import Button from "./Button.svelte";
@@ -11,7 +11,7 @@ import RankRow from "./RankRow.svelte";
 export let detail: GameDetail;
 export let error: string | undefined = undefined;
 
-$: offline = !online.current;
+$: offline = !$isOnline;
 $: winners = detail.players.filter((player) => player.rank === 1);
 $: tied = winners.length > 1;
 $: leader = winners[0];
