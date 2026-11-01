@@ -1,7 +1,7 @@
 <script lang="ts">
 import { createEventDispatcher, onMount } from "svelte";
-import { online } from "svelte/reactivity/window";
 import { DeleteIcon } from "svelte-feather-icons";
+import { isOnline } from "#lib/online.js";
 import { enhance, type SubmitFunction } from "$app/forms";
 
 export let playerId: string;
@@ -10,7 +10,7 @@ export let score: number;
 /** Saves the points; the sheet closes at once, the score updates optimistically. */
 export let onScore: SubmitFunction;
 
-$: offline = !online.current;
+$: offline = !$isOnline;
 
 const MAX_DIGITS = 3;
 const dispatch = createEventDispatcher<{ close: undefined }>();

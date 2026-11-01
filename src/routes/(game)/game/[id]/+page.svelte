@@ -5,6 +5,7 @@ import { ChevronUpIcon, RotateCcwIcon } from "svelte-feather-icons";
 import { relativeTime, signedPoints } from "#lib/format.js";
 import { isNewChange, parseGameMessage } from "#lib/gameMessages.js";
 import { meepleBg, meepleText } from "#lib/meeple.js";
+import { isOnline } from "#lib/online.js";
 import {
 	createPendingScores,
 	type PendingScore,
@@ -70,22 +71,6 @@ const pending = createPendingScores((entries) => {
 });
 let scoreError = "";
 
-// Plain state rather than `online` from svelte/reactivity/window: the `$:`
-// statements below only re-run for variables of this component, so they would
-// never notice the device going offline or coming back.
-let isOnline = true;
-onMount(() => {
-	isOnline = navigator.onLine;
-	const up = () => (isOnline = true);
-	const down = () => (isOnline = false);
-	window.addEventListener("online", up);
-	window.addEventListener("offline", down);
-	return () => {
-		window.removeEventListener("online", up);
-		window.removeEventListener("offline", down);
-	};
-});
-
 // Live updates and reconnects both land here. Missed updates are fetched when
 // the device is back online; see sync().
 let missedUpdates = false;
@@ -98,7 +83,7 @@ const RETRY_MS = 5000;
  * never recovers. A failed reload keeps the scores on screen and is retried.
  */
 async function reload(): Promise<boolean> {
-	if (!isOnline) {
+	if (!$isOnline) {
 		missedUpdates = true;
 		return false;
 	}
@@ -151,7 +136,7 @@ const saveScore: SubmitFunction = ({ formData }) => {
 let source: EventSource | undefined;
 
 function sync() {
-	if (!isOnline) {
+	if (!$isOnline) {
 		missedUpdates = true;
 		return;
 	}
@@ -209,7 +194,7 @@ $: serverView = {
 };
 // Closed while offline (see the offline banner); resyncs when it is reopened.
 $: if (browser) {
-	if (isOnline) connect(gameId);
+	if ($isOnline) connect(gameId);
 	else disconnect();
 }
 
@@ -229,7 +214,7 @@ $: shown = order.flatMap((id) => {
 $: unconfirmed = pendingEntries.length > 0;
 $: active = detail.game.status === "active";
 // Saved pages can be read offline, but a form posted with no network would just fail.
-$: offline = !isOnline;
+$: offline = !$isOnline;
 $: keypadPlayer = shown.find((p) => p.playerId === keypadFor);
 
 const pointsLabel = (points: number, name: string) =>
